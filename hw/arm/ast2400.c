@@ -77,15 +77,10 @@ static void ast2400_init(MachineState *machine)
     arm_load_kernel(cpu, &ast2400_binfo);
 }
 
-static QEMUMachine ast2400_machine = {
-    .name = "ast2400",
-    .desc = "ASpeed ast2400 BMC (ARM926EJ-S)",
-    .init = ast2400_init,
-};
-
-static void ast2400_machine_init(void)
+static void ast2400_machine_init(MachineClass *mc)
 {
-    qemu_register_machine(&ast2400_machine);
+    mc->desc = "ASpeed ast2400 BMC (ARM926EJ-S)";
+    mc->init = ast2400_init;
 }
 
-machine_init(ast2400_machine_init);
+DEFINE_MACHINE("ast2400", ast2400_machine_init);
