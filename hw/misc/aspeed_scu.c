@@ -21,7 +21,9 @@
 #define OFFSET_TO_REG(o) (o >> 2)
 
 #define SCU00 OFFSET_TO_REG(0x00)
+#define SCU08 OFFSET_TO_REG(0x08)
 #define SCU0C OFFSET_TO_REG(0x0C)
+#define SCU24 OFFSET_TO_REG(0x24)
 #define SCU2C OFFSET_TO_REG(0x2C)
 #define SCU3C OFFSET_TO_REG(0x3C)
 #define SCU70 OFFSET_TO_REG(0x70)
@@ -47,7 +49,9 @@ static uint64_t aspeed_scu_read(void *opaque, hwaddr offset, unsigned size)
 
     switch (offset) {
         case 0x00:
+        case 0x08:
         case 0x0C:
+        case 0x24:
         case 0x2C:
         case 0x3C:
         case 0x70:
