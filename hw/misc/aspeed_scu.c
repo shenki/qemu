@@ -125,18 +125,20 @@ static void aspeed_scu_reset(DeviceState *dev)
     AspeedSCUState *s = ASPEED_SCU(dev);
 
     s->regs[SCU00] = 0;
-    s->regs[SCU0C] = 0x19FC3E8BU;
+    s->regs[SCU08] = s->scu08_rst;
+    s->regs[SCU0C] = s->scu0c_rst;
+    s->regs[SCU24] = s->scu24_rst;
     s->regs[SCU2C] = 0x00000010U;
     s->regs[SCU3C] = 0x00000001U;
-    s->regs[SCU70] = 0;
+    s->regs[SCU70] = s->scu70_rst;
     s->regs[SCU7C] = 0x02000303U;
     s->regs[SCU80] = 0;
     s->regs[SCU84] = 0x0000F000U;
-    s->regs[SCU88] = 0x01000000U;
-    s->regs[SCU8C] = 0x000000FFU;
+    s->regs[SCU88] = s->scu88_rst;
+    s->regs[SCU8C] = s->scu8c_rst;
     s->regs[SCU90] = 0x0000A000U;
     s->regs[SCU94] = 0;
-    s->regs[SCU9C] = 0x003FFFF3U;
+    s->regs[SCU9C] = s->scu9c_rst;
 }
 
 static void aspeed_scu_realize(DeviceState *dev, Error **errp)
@@ -150,13 +152,36 @@ static void aspeed_scu_realize(DeviceState *dev, Error **errp)
     sysbus_init_mmio(sbd, &s->iomem);
 }
 
+static Property aspeed_scu_props[] = {
+    DEFINE_PROP_UINT32("scu08", AspeedSCUState, scu08_rst, 0xF3F40000U),
+    DEFINE_PROP_UINT32("scu0c", AspeedSCUState, scu0c_rst, 0),
+    DEFINE_PROP_UINT32("scu24", AspeedSCUState, scu24_rst, 0),
+    DEFINE_PROP_UINT32("scu70", AspeedSCUState, scu70_rst, 0),
+    DEFINE_PROP_UINT32("scu7c", AspeedSCUState, scu7c_rst, 0),
+    DEFINE_PROP_UINT32("scu88", AspeedSCUState, scu88_rst, 0),
+    DEFINE_PROP_UINT32("scu8c", AspeedSCUState, scu8c_rst, 0),
+    DEFINE_PROP_UINT32("scu9c", AspeedSCUState, scu9c_rst, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static const VMStateDescription vmstate_aspeed_scu = {
+    .name = "aspeed.new-vic",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT32_ARRAY(regs, AspeedSCUState, ASPEED_SCU_NR_REGS),
+        VMSTATE_END_OF_LIST()
+    }
+};
+
 static void aspeed_scu_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     dc->realize = aspeed_scu_realize;
     dc->reset = aspeed_scu_reset;
     dc->desc = "ASPEED System Control Unit";
-    /* dc->vmsd = &vmstate_aspeed_scu; */
+    dc->vmsd = &vmstate_aspeed_scu;
+    dc->props = aspeed_scu_props;
 }
 
 static const TypeInfo aspeed_scu_info = {
