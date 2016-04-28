@@ -16,6 +16,8 @@
 #define TYPE_ASPEED_SCU "aspeed.scu"
 #define ASPEED_SCU(obj) OBJECT_CHECK(AspeedSCUState, (obj), TYPE_ASPEED_SCU)
 
+#define ASPEED_SCU_NR_REGS	0x200
+
 typedef struct AspeedSCUState {
     /*< private >*/
     SysBusDevice parent_obj;
