@@ -47,3 +47,7 @@ escc_sunkbd_event_in(int ch, const char *name, int down) "QKeyCode 0x%2.2x [%s],
 escc_sunkbd_event_out(int ch) "Translated keycode 0x%2.2x"
 escc_kbd_command(int val) "Command %d"
 escc_sunmouse_event(int dx, int dy, int buttons_state) "dx=%d dy=%d buttons=%01x"
+
+# hw/char/efm32hg_leuart.c
+efm32hg_leuart_read(uint64_t offset, unsigned size, uint32_t data) "From 0x%02" PRIx64 " of size %u: 0x%08" PRIx32
+efm32hg_leuart_write(uint64_t offset, unsigned size, uint32_t data) "To 0x%02" PRIx64 " of size %u: 0x%08" PRIx32
