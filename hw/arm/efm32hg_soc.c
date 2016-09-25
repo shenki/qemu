@@ -56,6 +56,9 @@ static void efm32hg_soc_realize(DeviceState *dev_soc, Error **errp)
     DeviceState *nvic;
     Error *err = NULL;
 
+    /* HAX. See https://bugs.launchpad.net/qemu/+bug/696094 */
+    system_clock_scale = 1000;
+
     memory_region_init_io(&s->iomem, NULL, &efm32hg_soc_io_ops, NULL,
 		    "ef32hg_soc.io", EFM32HG_SOC_IOMEM_SIZE);
     memory_region_add_subregion_overlap(get_system_memory(),
