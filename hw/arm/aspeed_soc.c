@@ -267,15 +267,20 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
                        qdev_get_gpio_in(DEVICE(&s->vic), 12));
 
     /* add a TMP423 temperature sensor */
-    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 2),
+    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 5),
+                           "tmp423", 0x4c);
+    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 4),
                            "tmp423", 0x4c);
     object_property_set_int(OBJECT(dev), 31000, "temperature0", &err);
     object_property_set_int(OBJECT(dev), 28000, "temperature1", &err);
     object_property_set_int(OBJECT(dev), 20000, "temperature2", &err);
     object_property_set_int(OBJECT(dev), 110000, "temperature3", &err);
 
+    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 11),
+                           "rx8900", 0x32);
+
     /* Add a DPS310 temperature/humidity sensor */
-    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 2),
+    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 3),
                            "dps310", 0x76);
 
     /* The palmetto platform expects a ds3231 RTC but a ds1338 is
