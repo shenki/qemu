@@ -274,6 +274,10 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
     object_property_set_int(OBJECT(dev), 20000, "temperature2", &err);
     object_property_set_int(OBJECT(dev), 110000, "temperature3", &err);
 
+    /* Add a DPS310 temperature/humidity sensor */
+    dev = i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 2),
+                           "dps310", 0x76);
+
     /* The palmetto platform expects a ds3231 RTC but a ds1338 is
      * enough to provide basic RTC features. Alarms will be missing */
     i2c_create_slave(aspeed_i2c_get_bus(DEVICE(&s->i2c), 0), "ds1338", 0x68);
