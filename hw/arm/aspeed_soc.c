@@ -50,6 +50,7 @@ static const int timer_irqs[] = { 16, 17, 18, 35, 36, 37, 38, 39, };
 
 #define AST2400_SDRAM_BASE       0x40000000
 #define AST2500_SDRAM_BASE       0x80000000
+#define AST2600_SDRAM_BASE       0x80000000
 
 static const hwaddr aspeed_soc_ast2400_spi_bases[] = { ASPEED_SOC_SPI_BASE };
 static const char *aspeed_soc_ast2400_typenames[] = { "aspeed.smc.spi" };
@@ -99,6 +100,17 @@ static const AspeedSoCInfo aspeed_socs[] = {
         .silicon_rev  = AST2500_A1_SILICON_REV,
         .sdram_base   = AST2500_SDRAM_BASE,
         .sram_size    = 0x9000,
+        .spis_num     = 2,
+        .spi_bases    = aspeed_soc_ast2500_spi_bases,
+        .fmc_typename = "aspeed.smc.ast2500-fmc",
+        .spi_typename = aspeed_soc_ast2500_typenames,
+        .wdts_num     = 3,
+    }, {
+        .name         = "ast2600-a0",
+        .cpu_type     = ARM_CPU_TYPE_NAME("cortex-a7"),
+        .silicon_rev  = AST2600_A0_SILICON_REV,
+        .sdram_base   = AST2600_SDRAM_BASE,
+        .sram_size    = 0x10000,
         .spis_num     = 2,
         .spi_bases    = aspeed_soc_ast2500_spi_bases,
         .fmc_typename = "aspeed.smc.ast2500-fmc",
