@@ -181,6 +181,9 @@ static void aspeed_scu_set_apb_freq(AspeedSCUState *s)
     case AST2500_A1_SILICON_REV:
         apb_divider = 4;
         break;
+    case AST2600_A0_SILICON_REV: /* TODO */
+        apb_divider = 4;
+        break;
     default:
         g_assert_not_reached();
     }
@@ -373,6 +376,9 @@ static void aspeed_scu_reset(DeviceState *dev)
     case AST2500_A1_SILICON_REV:
         reset = ast2500_a1_resets;
         calc_hpll = aspeed_scu_calc_hpll_ast2500;
+    case AST2600_A0_SILICON_REV: /* TODO */
+        reset = ast2500_a1_resets;
+        calc_hpll = aspeed_scu_calc_hpll_ast2500;
         break;
     default:
         g_assert_not_reached();
@@ -397,6 +403,7 @@ static uint32_t aspeed_silicon_revs[] = {
     AST2400_A1_SILICON_REV,
     AST2500_A0_SILICON_REV,
     AST2500_A1_SILICON_REV,
+    AST2600_A0_SILICON_REV,
 };
 
 bool is_supported_silicon_rev(uint32_t silicon_rev)
