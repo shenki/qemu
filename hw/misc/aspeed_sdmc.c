@@ -141,6 +141,10 @@ static void aspeed_sdmc_write(void *opaque, hwaddr addr, uint64_t data,
             data &= ~ASPEED_SDMC_AST2500_READONLY_MASK;
             data |= s->fixed_conf;
             break;
+        case AST2600_A0_SILICON_REV: /* TODO */
+            data &= ~ASPEED_SDMC_AST2500_READONLY_MASK;
+            data |= s->fixed_conf;
+            break;
         default:
             g_assert_not_reached();
         }
@@ -248,6 +252,14 @@ static void aspeed_sdmc_realize(DeviceState *dev, Error **errp)
         break;
     case AST2500_A0_SILICON_REV:
     case AST2500_A1_SILICON_REV:
+        s->ram_bits = ast2500_rambits(s);
+        s->max_ram_size = 1024 << 20;
+        s->fixed_conf = ASPEED_SDMC_HW_VERSION(1) |
+            ASPEED_SDMC_VGA_APERTURE(ASPEED_SDMC_VGA_64MB) |
+            ASPEED_SDMC_CACHE_INITIAL_DONE |
+            ASPEED_SDMC_DRAM_SIZE(s->ram_bits);
+        break;
+    case AST2600_A0_SILICON_REV: /* TODO */
         s->ram_bits = ast2500_rambits(s);
         s->max_ram_size = 1024 << 20;
         s->fixed_conf = ASPEED_SDMC_HW_VERSION(1) |
