@@ -44,6 +44,8 @@ typedef struct AspeedI2CBus {
     uint32_t intr_status;
     uint32_t cmd;
     uint32_t buf;
+    uint32_t dma_addr;
+    uint32_t dma_len;
 } AspeedI2CBus;
 
 typedef struct AspeedI2CState {
@@ -55,6 +57,7 @@ typedef struct AspeedI2CState {
     uint32_t intr_status;
 
     AspeedI2CBus busses[ASPEED_I2C_NR_BUSSES];
+    bool has_dma;
 } AspeedI2CState;
 
 I2CBus *aspeed_i2c_get_bus(DeviceState *dev, int busnr);

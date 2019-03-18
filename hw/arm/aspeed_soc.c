@@ -248,6 +248,13 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
     }
 
     /* I2C */
+    object_property_set_bool(OBJECT(&s->i2c),
+                             ASPEED_IS_AST2500(sc->info->silicon_rev),
+                             "has-dma", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
     object_property_set_bool(OBJECT(&s->i2c), true, "realized", &err);
     if (err) {
         error_propagate(errp, err);

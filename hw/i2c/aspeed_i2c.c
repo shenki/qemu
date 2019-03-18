@@ -128,7 +128,8 @@
 #define   I2CD_BYTE_BUF_TX_MASK            0xff
 #define   I2CD_BYTE_BUF_RX_SHIFT           8
 #define   I2CD_BYTE_BUF_RX_MASK            0xff
-
+#define I2CD_DMA_ADDR           0x24       /* DMA Buffer Address */
+#define I2CD_DMA_LEN            0x28       /* DMA Transfer Length < 4KB */
 
 static inline bool aspeed_i2c_bus_is_master(AspeedI2CBus *bus)
 {
@@ -169,6 +170,18 @@ static uint64_t aspeed_i2c_bus_read(void *opaque, hwaddr offset,
         return bus->buf;
     case I2CD_CMD_REG:
         return bus->cmd | (i2c_bus_busy(bus->bus) << 16);
+    case I2CD_DMA_ADDR:
+        if (!bus->controller->has_dma) {
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: No DMA support\n",  __func__);
+            return -1;
+        }
+        return bus->dma_addr;
+    case I2CD_DMA_LEN:
+        if (!bus->controller->has_dma) {
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: No DMA support\n",  __func__);
+            return -1;
+        }
+        return bus->dma_len;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
                       "%s: Bad offset 0x%" HWADDR_PRIx "\n", __func__, offset);
@@ -187,14 +200,58 @@ static uint8_t aspeed_i2c_get_state(AspeedI2CBus *bus)
     return (bus->cmd >> I2CD_TX_STATE_SHIFT) & I2CD_TX_STATE_MASK;
 }
 
+static int aspeed_i2c_dma_read(AspeedI2CBus *bus, uint8_t *data)
+{
+    cpu_physical_memory_read(bus->dma_addr, data, 1);
+    bus->dma_addr++;
+    bus->dma_len--;
+    return 0;
+}
+
+static int aspeed_i2c_bus_send(AspeedI2CBus *bus)
+{
+    uint8_t data;
+    int ret = -1;
+
+    if (bus->cmd & I2CD_TX_DMA_ENABLE) {
+        while (bus->dma_len) {
+            aspeed_i2c_dma_read(bus, &data);
+            ret = i2c_send(bus->bus, data);
+            if (ret) {
+                break;
+            }
+        }
+        bus->cmd &= ~I2CD_TX_DMA_ENABLE;
+    } else {
+        ret = i2c_send(bus->bus, bus->buf);
+    }
+
+    return ret;
+}
+
+static void aspeed_i2c_bus_recv(AspeedI2CBus *bus)
+{
+    uint8_t data;
+
+    if (bus->cmd & I2CD_RX_DMA_ENABLE) {
+        while (bus->dma_len) {
+            data = i2c_recv(bus->bus);
+            cpu_physical_memory_write(bus->dma_addr, &data, 1);
+            bus->dma_addr++;
+            bus->dma_len--;
+        }
+        bus->cmd &= ~I2CD_RX_DMA_ENABLE;
+    } else {
+        data = i2c_recv(bus->bus);
+        bus->buf = (data & I2CD_BYTE_BUF_RX_MASK) << I2CD_BYTE_BUF_RX_SHIFT;
+    }
+}
+
 static void aspeed_i2c_handle_rx_cmd(AspeedI2CBus *bus)
 {
-    uint8_t ret;
-
     aspeed_i2c_set_state(bus, I2CD_MRXD);
-    ret = i2c_recv(bus->bus);
+    aspeed_i2c_bus_recv(bus);
     bus->intr_status |= I2CD_INTR_RX_DONE;
-    bus->buf = (ret & I2CD_BYTE_BUF_RX_MASK) << I2CD_BYTE_BUF_RX_SHIFT;
     if (bus->cmd & I2CD_M_S_RX_CMD_LAST) {
         i2c_nack(bus->bus);
     }
@@ -212,13 +269,20 @@ static void aspeed_i2c_bus_handle_cmd(AspeedI2CBus *bus, uint64_t value)
     bus->cmd |= value & 0xFFFF;
 
     if (bus->cmd & I2CD_M_START_CMD) {
+        uint8_t data;
         uint8_t state = aspeed_i2c_get_state(bus) & I2CD_MACTIVE ?
             I2CD_MSTARTR : I2CD_MSTART;
 
         aspeed_i2c_set_state(bus, state);
 
-        if (i2c_start_transfer(bus->bus, extract32(bus->buf, 1, 7),
-                               extract32(bus->buf, 0, 1))) {
+        if (bus->cmd & I2CD_TX_DMA_ENABLE) {
+            aspeed_i2c_dma_read(bus, &data);
+        } else {
+            data = bus->buf;
+        }
+
+        if (i2c_start_transfer(bus->bus, extract32(data, 1, 7),
+                               extract32(data, 0, 1))) {
             bus->intr_status |= I2CD_INTR_TX_NAK;
         } else {
             bus->intr_status |= I2CD_INTR_TX_ACK;
@@ -226,7 +290,9 @@ static void aspeed_i2c_bus_handle_cmd(AspeedI2CBus *bus, uint64_t value)
 
         /* START command is also a TX command, as the slave address is
          * sent on the bus */
-        bus->cmd &= ~(I2CD_M_START_CMD | I2CD_M_TX_CMD);
+        bus->cmd &= ~I2CD_M_START_CMD;
+        if (!(bus->cmd & I2CD_TX_DMA_ENABLE) || bus->dma_len == 0)
+            bus->cmd &= ~I2CD_M_TX_CMD;
 
         /* No slave found */
         if (!i2c_bus_busy(bus->bus)) {
@@ -237,7 +303,7 @@ static void aspeed_i2c_bus_handle_cmd(AspeedI2CBus *bus, uint64_t value)
 
     if (bus->cmd & I2CD_M_TX_CMD) {
         aspeed_i2c_set_state(bus, I2CD_MTXD);
-        if (i2c_send(bus->bus, bus->buf)) {
+        if (aspeed_i2c_bus_send(bus)) {
             bus->intr_status |= (I2CD_INTR_TX_NAK);
             i2c_end_transfer(bus->bus);
         } else {
@@ -321,8 +387,34 @@ static void aspeed_i2c_bus_write(void *opaque, hwaddr offset,
             break;
         }
 
+        if (!bus->controller->has_dma &&
+            value & (I2CD_RX_DMA_ENABLE | I2CD_TX_DMA_ENABLE)) {
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: No DMA support\n",  __func__);
+            break;
+        }
+
         aspeed_i2c_bus_handle_cmd(bus, value);
         aspeed_i2c_bus_raise_interrupt(bus);
+        break;
+    case I2CD_DMA_ADDR:
+        if (!bus->controller->has_dma) {
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: No DMA support\n",  __func__);
+            break;
+        }
+
+        bus->dma_addr = value & 0xfffffffc;
+        break;
+
+    case I2CD_DMA_LEN:
+        if (!bus->controller->has_dma) {
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: No DMA support\n",  __func__);
+            break;
+        }
+
+        bus->dma_len = value & 0xfff;
+        if (!bus->dma_len) {
+            qemu_log_mask(LOG_UNIMP, "%s: invalid DMA length\n",  __func__);
+        }
         break;
 
     default:
@@ -413,6 +505,8 @@ static void aspeed_i2c_reset(DeviceState *dev)
         s->busses[i].intr_status = 0;
         s->busses[i].cmd = 0;
         s->busses[i].buf = 0;
+        s->busses[i].dma_addr = 0;
+        s->busses[i].dma_len = 0;
         i2c_end_transfer(s->busses[i].bus);
     }
 }
@@ -463,12 +557,18 @@ static void aspeed_i2c_realize(DeviceState *dev, Error **errp)
     }
 }
 
+static Property aspeed_i2c_properties[] = {
+    DEFINE_PROP_BOOL("has-dma", AspeedI2CState, has_dma, false),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
 static void aspeed_i2c_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->vmsd = &aspeed_i2c_vmstate;
     dc->reset = aspeed_i2c_reset;
+    dc->props = aspeed_i2c_properties;
     dc->realize = aspeed_i2c_realize;
     dc->desc = "Aspeed I2C Controller";
 }
