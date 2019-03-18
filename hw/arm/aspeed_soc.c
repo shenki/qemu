@@ -23,6 +23,7 @@
 #include "net/net.h"
 
 #define ASPEED_SOC_UART_5_BASE      0x00184000
+#define ASPEED_SOC_VUART_BASE       0x00187000
 #define ASPEED_SOC_IOMEM_SIZE       0x00200000
 #define ASPEED_SOC_IOMEM_BASE       0x1E600000
 #define ASPEED_SOC_FMC_BASE         0x1E620000
@@ -262,6 +263,14 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
         serial_mm_init(get_system_memory(),
                        ASPEED_SOC_IOMEM_BASE + ASPEED_SOC_UART_5_BASE, 2,
                        uart5, 38400, serial_hd(0), DEVICE_LITTLE_ENDIAN);
+    }
+
+    /* VUART */
+    if (serial_hd(1)) {
+        qemu_irq vuart = qdev_get_gpio_in(DEVICE(&s->vic), 8);
+        serial_mm_init(get_system_memory(),
+                       ASPEED_SOC_IOMEM_BASE + ASPEED_SOC_VUART_BASE, 2,
+                       vuart, 38400, serial_hd(1), DEVICE_LITTLE_ENDIAN);
     }
 
     /* I2C */
