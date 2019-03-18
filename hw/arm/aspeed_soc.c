@@ -22,6 +22,7 @@
 #include "hw/i2c/aspeed_i2c.h"
 #include "net/net.h"
 
+#define ASPEED_SOC_UART_1_BASE      0x00183000
 #define ASPEED_SOC_UART_5_BASE      0x00184000
 #define ASPEED_SOC_VUART_BASE       0x00187000
 #define ASPEED_SOC_IOMEM_SIZE       0x00200000
@@ -282,6 +283,14 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
         serial_mm_init(get_system_memory(),
                        ASPEED_SOC_IOMEM_BASE + ASPEED_SOC_VUART_BASE, 2,
                        vuart, 38400, serial_hd(1), DEVICE_LITTLE_ENDIAN);
+    }
+
+    /* UART1 */
+    if (serial_hd(2)) {
+        qemu_irq uart1 = qdev_get_gpio_in(DEVICE(&s->vic), 9);
+        serial_mm_init(get_system_memory(),
+                       ASPEED_SOC_IOMEM_BASE + ASPEED_SOC_UART_1_BASE, 2,
+                       uart1, 38400, serial_hd(2), DEVICE_LITTLE_ENDIAN);
     }
 
     /* I2C */
