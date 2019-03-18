@@ -194,6 +194,10 @@ static void aspeed_soc_init(Object *obj)
     object_initialize(&s->pwm, sizeof(s->pwm), TYPE_ASPEED_PWM);
     object_property_add_child(obj, "pwm", OBJECT(&s->pwm), NULL);
     qdev_set_parent_bus(DEVICE(&s->pwm), sysbus_get_default());
+
+    object_initialize(&s->lpc, sizeof(s->lpc), TYPE_ASPEED_LPC);
+    object_property_add_child(obj, "lpc", OBJECT(&s->lpc), NULL);
+    qdev_set_parent_bus(DEVICE(&s->lpc), sysbus_get_default());
 }
 
 static void aspeed_soc_realize(DeviceState *dev, Error **errp)
@@ -408,6 +412,15 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->pwm), 0, ASPEED_SOC_PWM_BASE);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->pwm), 0,
             qdev_get_gpio_in(DEVICE(&s->vic), 28));
+
+    /* LPC */
+    object_property_set_bool(OBJECT(&s->lpc), true, "realized", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->lpc), 0, ASPEED_SOC_LPC_BASE);
+    /* LPC IRQ in use by the iBT sub controller */
 }
 
 static void aspeed_soc_class_init(ObjectClass *oc, void *data)
