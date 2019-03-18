@@ -24,6 +24,7 @@
 #include "hw/net/ftgmac100.h"
 #include "hw/misc/aspeed_ibt.h"
 #include "hw/gpio/aspeed_gpio.h"
+#include "hw/misc/aspeed_pwm.h"
 
 #define ASPEED_SPIS_NUM  2
 #define ASPEED_WDTS_NUM  3
@@ -47,6 +48,7 @@ typedef struct AspeedSoCState {
     FTGMAC100State ftgmac100;
     AspeedIBTState ibt;
     AspeedGPIOState gpio;
+    AspeedPWMState pwm;
 } AspeedSoCState;
 
 #define TYPE_ASPEED_SOC "aspeed-soc"

@@ -38,6 +38,7 @@
 #define ASPEED_SOC_GPIO_BASE        0x1E780000
 #define ASPEED_SOC_TIMER_BASE       0x1E782000
 #define ASPEED_SOC_WDT_BASE         0x1E785000
+#define ASPEED_SOC_PWM_BASE         0x1E786000
 #define ASPEED_SOC_LPC_BASE         0x1E789000
 #define ASPEED_SOC_IBT_BASE         (ASPEED_SOC_LPC_BASE + 0x140)
 #define ASPEED_SOC_I2C_BASE         0x1E78A000
@@ -189,6 +190,10 @@ static void aspeed_soc_init(Object *obj)
     object_initialize(&s->gpio, sizeof(s->gpio), TYPE_ASPEED_GPIO);
     object_property_add_child(obj, "gpio", OBJECT(&s->gpio), NULL);
     qdev_set_parent_bus(DEVICE(&s->gpio), sysbus_get_default());
+
+    object_initialize(&s->pwm, sizeof(s->pwm), TYPE_ASPEED_PWM);
+    object_property_add_child(obj, "pwm", OBJECT(&s->pwm), NULL);
+    qdev_set_parent_bus(DEVICE(&s->pwm), sysbus_get_default());
 }
 
 static void aspeed_soc_realize(DeviceState *dev, Error **errp)
@@ -393,6 +398,16 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->gpio), 0, ASPEED_SOC_GPIO_BASE);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->gpio), 0,
             qdev_get_gpio_in(DEVICE(&s->vic), 20));
+
+    /* PWM */
+    object_property_set_bool(OBJECT(&s->pwm), true, "realized", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->pwm), 0, ASPEED_SOC_PWM_BASE);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->pwm), 0,
+            qdev_get_gpio_in(DEVICE(&s->vic), 28));
 }
 
 static void aspeed_soc_class_init(ObjectClass *oc, void *data)
