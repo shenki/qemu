@@ -31,6 +31,7 @@
 #define ASPEED_SOC_VIC_BASE         0x1E6C0000
 #define ASPEED_SOC_SDMC_BASE        0x1E6E0000
 #define ASPEED_SOC_SCU_BASE         0x1E6E2000
+#define ASPEED_SOC_ADC_BASE         0x1E6E9000
 #define ASPEED_SOC_SRAM_BASE        0x1E720000
 #define ASPEED_SOC_TIMER_BASE       0x1E782000
 #define ASPEED_SOC_WDT_BASE         0x1E785000
@@ -135,6 +136,10 @@ static void aspeed_soc_init(Object *obj)
     object_property_add_child(obj, "i2c", OBJECT(&s->i2c), NULL);
     qdev_set_parent_bus(DEVICE(&s->i2c), sysbus_get_default());
 
+    object_initialize(&s->adc, sizeof(s->adc), TYPE_ASPEED_ADC);
+    object_property_add_child(obj, "adc", OBJECT(&s->adc), NULL);
+    qdev_set_parent_bus(DEVICE(&s->adc), sysbus_get_default());
+
     object_initialize(&s->fmc, sizeof(s->fmc), sc->info->fmc_typename);
     object_property_add_child(obj, "fmc", OBJECT(&s->fmc), NULL);
     qdev_set_parent_bus(DEVICE(&s->fmc), sysbus_get_default());
@@ -238,6 +243,16 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
         qemu_irq irq = qdev_get_gpio_in(DEVICE(&s->vic), timer_irqs[i]);
         sysbus_connect_irq(SYS_BUS_DEVICE(&s->timerctrl), i, irq);
     }
+
+    /* ADC */
+    object_property_set_bool(OBJECT(&s->adc), true, "realized", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->adc), 0, ASPEED_SOC_ADC_BASE);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->adc), 0,
+            qdev_get_gpio_in(DEVICE(&s->vic), 31));
 
     /* UART - attach an 8250 to the IO space as our UART5 */
     if (serial_hd(0)) {
