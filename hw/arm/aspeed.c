@@ -235,6 +235,9 @@ static void aspeed_board_init(MachineState *machine,
     aspeed_board_binfo.kernel_cmdline = machine->kernel_cmdline;
     aspeed_board_binfo.ram_size = ram_size;
     aspeed_board_binfo.loader_start = sc->info->sdram_base;
+    aspeed_board_binfo.modify_dtb = aspeed_board_modify_dtb;
+    aspeed_board_binfo.gic_cpu_if_addr = 0x40461000;
+    aspeed_board_binfo.nb_cpus = 2;
 
     if (cfg->i2c_init) {
         cfg->i2c_init(bmc);
