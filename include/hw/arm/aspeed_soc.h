@@ -18,6 +18,7 @@
 #include "hw/adc/aspeed_adc.h"
 #include "hw/misc/aspeed_sdmc.h"
 #include "hw/timer/aspeed_timer.h"
+#include "hw/timer/aspeed_rtc.h"
 #include "hw/i2c/aspeed_i2c.h"
 #include "hw/ssi/aspeed_smc.h"
 #include "hw/watchdog/wdt_aspeed.h"
@@ -51,6 +52,7 @@ typedef struct AspeedSoCState {
     AspeedGPIOState gpio;
     AspeedPWMState pwm;
     AspeedLPCState lpc;
+    AspeedRtcState rtc;
 } AspeedSoCState;
 
 #define TYPE_ASPEED_SOC "aspeed-soc"
