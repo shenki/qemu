@@ -96,6 +96,9 @@
 #define IPMI_CMD_GET_SEL_TIME             0x48
 #define IPMI_CMD_SET_SEL_TIME             0x49
 
+#define IPMI_NETFN_SEL_OEM_IBM          0x3a
+
+#define IPMI_CMD_HIOMAP                   0x5a
 
 /* Same as a timespec struct. */
 struct ipmi_time {
@@ -1980,6 +1983,13 @@ static void set_sensor_reading(IPMIBmcSim *ibs,
     }
 }
 
+static void do_hiomap(IPMIBmcSim *ibs,
+                         uint8_t *cmd, unsigned int cmd_len,
+                         RspBuffer *rsp)
+{
+}
+
+
 static const IPMICmdHandler chassis_cmds[] = {
     [IPMI_CMD_GET_CHASSIS_CAPABILITIES] = { chassis_capabilities },
     [IPMI_CMD_GET_CHASSIS_STATUS] = { chassis_status },
@@ -2053,12 +2063,22 @@ static const IPMINetfn storage_netfn = {
     .cmd_handlers = storage_cmds
 };
 
+static const IPMICmdHandler oem_ibm_cmds[] = {
+    [IPMI_CMD_HIOMAP] = { do_hiomap },
+};
+
+static const IPMINetfn oem_ibm_netfn = {
+    .cmd_nums = ARRAY_SIZE(oem_ibm_cmds),
+    .cmd_handlers = oem_ibm_cmds
+};
+
 static void register_cmds(IPMIBmcSim *s)
 {
     ipmi_register_netfn(s, IPMI_NETFN_CHASSIS, &chassis_netfn);
     ipmi_register_netfn(s, IPMI_NETFN_SENSOR_EVENT, &sensor_event_netfn);
     ipmi_register_netfn(s, IPMI_NETFN_APP, &app_netfn);
     ipmi_register_netfn(s, IPMI_NETFN_STORAGE, &storage_netfn);
+    ipmi_register_netfn(s, IPMI_NETFN_SEL_OEM_IBM, &oem_ibm_netfn);
 }
 
 static uint8_t init_sdrs[] = {
