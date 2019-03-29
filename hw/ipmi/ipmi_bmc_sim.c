@@ -1983,10 +1983,69 @@ static void set_sensor_reading(IPMIBmcSim *ibs,
     }
 }
 
+#define HIOMAP_C_RESET 1
+#define HIOMAP_C_GET_INFO 2
+#define HIOMAP_C_GET_FLASH_INFO 3
+#define HIOMAP_C_CREATE_READ_WINDOW 4
+#define HIOMAP_C_CLOSE_WINDOW 5
+#define HIOMAP_C_CREATE_WRITE_WINDOW 6
+#define HIOMAP_C_MARK_DIRTY 7
+#define HIOMAP_C_FLUSH 8
+#define HIOMAP_C_ACK 9
+#define HIOMAP_C_ERASE 10
+
 static void do_hiomap(IPMIBmcSim *ibs,
                          uint8_t *cmd, unsigned int cmd_len,
                          RspBuffer *rsp)
 {
+    unsigned int hiomap_cmd = cmd[2];
+    unsigned int hiomap_seq = cmd[3];
+    /* Hard code a window that covers the entire flash space */
+    uint8_t version = 2;
+    uint8_t block_size_shift = 12; /* 4k (min) */
+    uint16_t timeout = 8;
+    uint16_t flash_size = 64 * 1024 * 1024 >> block_size_shift;
+    uint16_t erase_size = 4 * 1024 >> block_size_shift;
+    uint16_t lpc_address = 0x0c000000 >> block_size_shift; /* PNOR_SPI_OFFSET */
+    uint16_t window_size = flash_size;
+    uint16_t window_offset = 0;
+
+    /* All HIOMAP responses should contain the cmd and sequence number */
+    rsp_buffer_push(rsp, hiomap_cmd);
+    rsp_buffer_push(rsp, hiomap_seq);
+
+    switch (hiomap_cmd) {
+    case HIOMAP_C_RESET:
+        break;
+    case HIOMAP_C_GET_INFO:
+        rsp_buffer_push(rsp, version);
+        rsp_buffer_push(rsp, block_size_shift);
+        rsp_buffer_push(rsp, timeout & 0xff);
+        rsp_buffer_push(rsp, (timeout >> 8) & 0xff);
+        break;
+    case HIOMAP_C_GET_FLASH_INFO:
+        rsp_buffer_push(rsp, flash_size & 0xff);
+        rsp_buffer_push(rsp, (flash_size >> 8) & 0xff);
+        rsp_buffer_push(rsp, erase_size & 0xff);
+        rsp_buffer_push(rsp, (erase_size >> 8) & 0xff);
+        break;
+    case HIOMAP_C_CREATE_READ_WINDOW:
+    case HIOMAP_C_CREATE_WRITE_WINDOW:
+        rsp_buffer_push(rsp, lpc_address & 0xff);
+        rsp_buffer_push(rsp, (lpc_address >> 8) & 0xff);
+        rsp_buffer_push(rsp, window_size & 0xff);
+        rsp_buffer_push(rsp, (window_size >> 8) & 0xff);
+        rsp_buffer_push(rsp, window_offset & 0xff);
+        rsp_buffer_push(rsp, (window_offset >> 8) & 0xff);
+    case HIOMAP_C_ERASE:
+    case HIOMAP_C_MARK_DIRTY:
+    case HIOMAP_C_CLOSE_WINDOW:
+    case HIOMAP_C_FLUSH:
+    case HIOMAP_C_ACK:
+        break;
+    default:
+        rsp_buffer_set_error(rsp, IPMI_CC_COMMAND_INVALID_FOR_LUN);
+    }
 }
 
 
