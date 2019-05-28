@@ -23,6 +23,7 @@
 #include "hw/i2c/aspeed_i2c.h"
 #include "net/net.h"
 #include "sysemu/blockdev.h"
+#include "hw/loader.h"
 
 #define ASPEED_SOC_IOMEM_SIZE       0x00200000
 
@@ -359,6 +360,16 @@ static void aspeed_soc_init(Object *obj)
                               sizeof(s->fsi[0]), TYPE_ASPEED_FSI);
     }
 }
+#if 0
+static void aspeed_write_smpboot(ARMCPU *cpu, const struct arm_boot_info *info)
+{
+    static const uint32_t smpboot[] = {
+    };
+
+    rom_add_blob_fixed("ast2600_smpboot", smpboot, sizeof(smpboot),
+                       info->smp_loader_start);
+}
+#endif
 
 static void aspeed_soc_realize(DeviceState *dev, Error **errp)
 {
@@ -383,7 +394,8 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
             object_property_set_int(OBJECT(&s->cpu[i]), QEMU_PSCI_CONDUIT_SMC,
                                     "psci-conduit", &error_abort);
             if (smp_cpus > 1) {
-                object_property_set_int(OBJECT(&s->cpu[i]), ASPEED_A7MPCORE_ADDR,
+                printf("%s: setting reset-cbar to 0x1e6e2180\n", __func__);
+                object_property_set_int(OBJECT(&s->cpu[i]), 0x1e6e2180,
                                         "reset-cbar", &error_abort);
             }
 
