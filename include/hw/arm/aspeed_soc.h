@@ -29,11 +29,13 @@
 #include "hw/misc/aspeed_pwm.h"
 #include "hw/misc/aspeed_lpc.h"
 #include "hw/misc/aspeed_fsi.h"
+#include "hw/sd/sdhci.h"
 
 #define ASPEED_SPIS_NUM  2
 #define ASPEED_WDTS_NUM  4
 #define ASPEED_CPUS_NUM  2
 #define ASPEED_MACS_NUM  2
+#define ASPEED_SDHCI_NUM 2
 
 typedef struct AspeedSoCState {
     /*< private >*/
@@ -62,6 +64,7 @@ typedef struct AspeedSoCState {
     AspeedPWMState pwm;
     AspeedLPCState lpc;
     AspeedFsiState fsi[2];
+    SDHCIState sdhci[ASPEED_SDHCI_NUM];
 } AspeedSoCState;
 
 #define TYPE_ASPEED_SOC "aspeed-soc"
@@ -108,6 +111,7 @@ enum {
     ASPEED_SCU,
     ASPEED_ADC,
     ASPEED_SRAM,
+    ASPEED_SDHCI,
     ASPEED_GPIO,
     ASPEED_RTC,
     ASPEED_TIMER1,

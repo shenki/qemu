@@ -22,6 +22,8 @@
 #include "qemu/error-report.h"
 #include "hw/i2c/aspeed_i2c.h"
 #include "net/net.h"
+#include "hw/sd/sdhci.h"
+#include "sysemu/blockdev.h"
 
 #define ASPEED_SOC_IOMEM_SIZE       0x00200000
 
@@ -62,6 +64,7 @@ static const hwaddr aspeed_soc_ast2500_memmap[] = {
     [ASPEED_XDMA]   = 0x1E6E7000,
     [ASPEED_ADC]    = 0x1E6E9000,
     [ASPEED_SRAM]   = 0x1E720000,
+    [ASPEED_SDHCI]  = 0x1E740000,
     [ASPEED_GPIO]   = 0x1E780000,
     [ASPEED_RTC]    = 0x1E781000,
     [ASPEED_TIMER1] = 0x1E782000,
@@ -377,6 +380,11 @@ static void aspeed_soc_init(Object *obj)
     if (ASPEED_IS_AST2600(sc->info->silicon_rev)) {
         sysbus_init_child_obj(obj, "fsi[*]", OBJECT(&s->fsi[0]),
                               sizeof(s->fsi[0]), TYPE_ASPEED_FSI);
+    }
+
+    for (i = 0; i < ASPEED_SDHCI_NUM; i++) {
+        sysbus_init_child_obj(obj, "sdhci[*]", OBJECT(&s->sdhci[i]),
+                              sizeof(s->sdhci[i]), TYPE_SYSBUS_SDHCI);
     }
 }
 
@@ -699,6 +707,53 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
         sysbus_connect_irq(SYS_BUS_DEVICE(&s->fsi[0]), 0,
                            aspeed_soc_get_irq(s, ASPEED_FSI1));
     }
+
+    /* SD/SDIO */
+    for (i = 0; i < ASPEED_SDHCI_NUM; i++) {
+        hwaddr hci_addr = sc->info->memmap[ASPEED_SDHCI] + (0x100 * (i + 1));
+        DriveInfo *di;
+        BlockBackend *blk;
+        DeviceState *carddev;
+
+        /* Compatible with:
+         * - SD Host Controller Specification Version 2.0
+         * - SDIO Specification Version 2.0
+         * - MMC Specification Version 4.3
+         */
+        object_property_set_int(OBJECT(&s->sdhci[i]), 2, "sd-spec-version",
+                &err);
+        if (err) {
+            error_propagate(errp, err);
+            return;
+        }
+
+#define ASPEED_SDHCI_CAPABILITIES 0x01E80080
+#define EXYNOS4210_SDHCI_CAPABILITIES       0x05E80080
+
+        object_property_set_uint(OBJECT(&s->sdhci[i]),
+                ASPEED_SDHCI_CAPABILITIES, "capareg", &err);
+        if (err) {
+            error_propagate(errp, err);
+            return;
+        }
+        object_property_set_bool(OBJECT(&s->sdhci[i]), true, "realized", &err);
+        if (err) {
+            error_propagate(errp, err);
+            return;
+        }
+
+        sysbus_mmio_map(SYS_BUS_DEVICE(&s->sdhci[i]), 0, hci_addr);
+
+        di = drive_get_next(IF_SD);
+        blk = di ? blk_by_legacy_dinfo(di) : NULL;
+        carddev = qdev_create(
+                qdev_get_child_bus(DEVICE(&s->sdhci[i]), "sd-bus"),
+                TYPE_SD_CARD);
+        qdev_prop_set_drive(carddev, "drive", blk, &error_fatal);
+        object_property_set_bool(OBJECT(carddev), true, "realized",
+                                 &error_fatal);
+    }
+
 }
 static Property aspeed_soc_properties[] = {
     DEFINE_PROP_UINT32("num-cpus", AspeedSoCState, num_cpus, 0),
