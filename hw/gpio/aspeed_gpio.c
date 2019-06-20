@@ -705,12 +705,13 @@ static const struct AspeedGPIO gpios[GPIO_REG_ARRAY_SIZE] = {
 
 static uint64_t aspeed_offset_to_idx(hwaddr offset)
 {
-    if (offset > GPIO_REG_ARRAY_SIZE) {
+    if (offset >> 2 > GPIO_REG_ARRAY_SIZE) {
         /* HACK */
         if (offset >= 0x800 && offset < 0x9D8) {
-            return (offset - 600) >> 2;
+            return (offset - 0x600) >> 2;
         } else {
-            qemu_log_mask(LOG_GUEST_ERROR, "offset %lx out of bounds", offset);
+            qemu_log_mask(LOG_GUEST_ERROR, "%s: offset %lx out of bounds\n",
+                          __func__, offset);
             return -1;
         }
     }
@@ -729,12 +730,13 @@ static uint64_t aspeed_gpio_read(void *opaque, hwaddr offset, uint32_t size)
 
     idx = aspeed_offset_to_idx(offset);
 
-    if ((idx == -1) || (gpios[offset].get == NULL)) {
-        qemu_log_mask(LOG_GUEST_ERROR, "no getter for offset %lx", offset);
+    if ((idx == -1) || (gpios[idx].get == NULL)) {
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: no getter for offset %lx\n",
+                    __func__, offset);
         return 0;
     }
 
-    val = gpios[offset].get(&s->sets[gpios[offset].set_idx]);
+    val = gpios[idx].get(&s->sets[gpios[idx].set_idx]);
     return (uint64_t) val;
 }
 
@@ -747,14 +749,15 @@ static void aspeed_gpio_write(void *opaque, hwaddr offset, uint64_t data,
 
     idx = aspeed_offset_to_idx(offset);
 
-    if ((idx == -1) || (gpios[offset].set == NULL)) {
-        qemu_log_mask(LOG_GUEST_ERROR, "no setter for offset %lx", offset);
+    if ((idx == -1) || (gpios[idx].set == NULL)) {
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: no setter for offset %lx\n",
+                      __func__, offset);
         return;
     }
 
     uint32_t mask = props->input | props->output;
 
-    gpios[offset].set(s, &s->sets[gpios[offset].set_idx],
+    gpios[idx].set(s, &s->sets[gpios[idx].set_idx],
                       props, data & mask);
 }
 
@@ -766,7 +769,8 @@ static void aspeed_gpio_get_pin(Object *obj, Visitor *v, const char *name,
     char group[3];
     AspeedGPIOState *s = ASPEED_GPIO(obj);
     if (sscanf(name, "gpio%2[A-Z]%1d", group, &pin) != 2) {
-        qemu_log_mask(LOG_GUEST_ERROR, "error reading %s", name);
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: error reading %s\n",
+                      __func__, name);
         return;
     }
     level = aspeed_gpio_get_pin_level(s, pin);
@@ -783,7 +787,8 @@ static void aspeed_gpio_set_pin(Object *obj, Visitor *v, const char *name,
     AspeedGPIOState *s = ASPEED_GPIO(obj);
     visit_type_bool(v, name, &level, &local_err);
     if (sscanf(name, "gpio%2[A-Z]%1d", group, &pin) != 2) {
-        qemu_log_mask(LOG_GUEST_ERROR, "error reading %s", name);
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: error reading %s\n",
+                      __func__, name);
         return;
     }
     aspeed_gpio_set_pin_level(s, pin, level);
