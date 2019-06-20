@@ -46,6 +46,7 @@
 #include "qapi/visitor.h"
 
 #define ASPEED_GPIOS_PER_REG 32
+#define GPIO_REG_ARRAY_SIZE 0x1f0/4
 
 /* GPIO Source Types */
 #define ASPEED_CMD_SRC_MASK         0x01010101
@@ -62,121 +63,121 @@
 #define ASPEED_DUAL_EDGE    4
 
 /* GPIO Register Address Offsets */
-#define GPIO_ABCD_DATA_VALUE     0x000
-#define GPIO_ABCD_DIRECTION      0x004
-#define GPIO_ABCD_INT_ENABLE     0x008
-#define GPIO_ABCD_INT_SENS_0     0x00C
-#define GPIO_ABCD_INT_SENS_1     0x010
-#define GPIO_ABCD_INT_SENS_2     0x014
-#define GPIO_ABCD_INT_STATUS     0x018
-#define GPIO_ABCD_RESET_TOLERANT 0x01C
-#define GPIO_EFGH_DATA_VALUE     0x020
-#define GPIO_EFGH_DIRECTION      0x024
-#define GPIO_EFGH_INT_ENABLE     0x028
-#define GPIO_EFGH_INT_SENS_0     0x02C
-#define GPIO_EFGH_INT_SENS_1     0x030
-#define GPIO_EFGH_INT_SENS_2     0x034
-#define GPIO_EFGH_INT_STATUS     0x038
-#define GPIO_EFGH_RESET_TOL      0x03C
-#define GPIO_ABCD_DEBOUNCE_1     0x040
-#define GPIO_ABCD_DEBOUNCE_2     0x044
-#define GPIO_EFGH_DEBOUNCE_1     0x048
-#define GPIO_EFGH_DEBOUNCE_2     0x04C
-#define GPIO_DEBOUNCE_TIME_1     0x050
-#define GPIO_DEBOUNCE_TIME_2     0x054
-#define GPIO_DEBOUNCE_TIME_3     0x058
-#define GPIO_ABCD_COMMAND_SRC_0  0x060
-#define GPIO_ABCD_COMMAND_SRC_1  0x064
-#define GPIO_EFGH_COMMAND_SRC_0  0x068
-#define GPIO_EFGH_COMMAND_SRC_1  0x06C
-#define GPIO_IJKL_DATA_VALUE     0x070
-#define GPIO_IJKL_DIRECTION      0x074
-#define GPIO_MNOP_DATA_VALUE     0x078
-#define GPIO_MNOP_DIRECTION      0x07C
-#define GPIO_QRST_DATA_VALUE     0x080
-#define GPIO_QRST_DIRECTION      0x084
-#define GPIO_UVWX_DATA_VALUE     0x088
-#define GPIO_UWVX_DIRECTION      0x08C
-#define GPIO_IJKL_COMMAND_SRC_0  0x090
-#define GPIO_IJKL_COMMAND_SRC_1  0x094
-#define GPIO_IJKL_INT_ENABLE     0x098
-#define GPIO_IJKL_INT_SENS_0     0x09C
-#define GPIO_IJKL_INT_SENS_1     0x0A0
-#define GPIO_IJKL_INT_SENS_2     0x0A4
-#define GPIO_IJKL_INT_STATUS     0x0A8
-#define GPIO_IJKL_RESET_TOLERANT 0x0AC
-#define GPIO_IJKL_DEBOUNCE_1     0x0B0
-#define GPIO_IJKL_DEBOUNCE_2     0x0B4
-#define GPIO_IJKL_INPUT_MASK     0x0B8
-#define GPIO_ABCD_DATA_READ      0x0C0
-#define GPIO_EFGH_DATA_READ      0x0C4
-#define GPIO_IJKL_DATA_READ      0x0C8
-#define GPIO_MNOP_DATA_READ      0x0CC
-#define GPIO_QRST_DATA_READ      0x0D0
-#define GPIO_UVWX_DATA_READ      0x0D4
-#define GPIO_YZAAAB_DATA_READ    0x0D8
-#define GPIO_AC_DATA_READ        0x0DC
-#define GPIO_MNOP_COMMAND_SRC_0  0x0E0
-#define GPIO_MNOP_COMMAND_SRC_1  0x0E4
-#define GPIO_MNOP_INT_ENABLE     0x0E8
-#define GPIO_MNOP_INT_SENS_0     0x0EC
-#define GPIO_MNOP_INT_SENS_1     0x0F0
-#define GPIO_MNOP_INT_SENS_2     0x0F4
-#define GPIO_MNOP_INT_STATUS     0x0F8
-#define GPIO_MNOP_RESET_TOLERANT 0x0FC
-#define GPIO_MNOP_DEBOUNCE_1     0x100
-#define GPIO_MNOP_DEBOUNCE_2     0x104
-#define GPIO_MNOP_INPUT_MASK     0x108
-#define GPIO_QRST_COMMAND_SRC_0  0x110
-#define GPIO_QRST_COMMAND_SRC_1  0x114
-#define GPIO_QRST_INT_ENABLE     0x118
-#define GPIO_QRST_INT_SENS_0     0x11C
-#define GPIO_QRST_INT_SENS_1     0x120
-#define GPIO_QRST_INT_SENS_2     0x124
-#define GPIO_QRST_INT_STATUS     0x128
-#define GPIO_QRST_RESET_TOLERANT 0x12C
-#define GPIO_QRST_DEBOUNCE_1     0x130
-#define GPIO_QRST_DEBOUNCE_2     0x134
-#define GPIO_QRST_INPUT_MASK     0x138
-#define GPIO_UVWX_COMMAND_SRC_0  0x140
-#define GPIO_UVWX_COMMAND_SRC_1  0x144
-#define GPIO_UVWX_INT_ENABLE     0x148
-#define GPIO_UVWX_INT_SENS_0     0x14C
-#define GPIO_UVWX_INT_SENS_1     0x150
-#define GPIO_UVWX_INT_SENS_2     0x154
-#define GPIO_UVWX_INT_STATUS     0x158
-#define GPIO_UVWX_RESET_TOLERANT 0x15C
-#define GPIO_UVWX_DEBOUNCE_1     0x160
-#define GPIO_UVWX_DEBOUNCE_2     0x164
-#define GPIO_UVWX_INPUT_MASK     0x168
-#define GPIO_YZAAAB_COMMAND_SRC_0 0x170
-#define GPIO_YZAAAB_COMMAND_SRC_1 0x174
-#define GPIO_YZAAAB_INT_ENABLE   0x178
-#define GPIO_YZAAAB_INT_SENS_0   0x17C
-#define GPIO_YZAAAB_INT_SENS_1   0x180
-#define GPIO_YZAAAB_INT_SENS_2   0x184
-#define GPIO_YZAAAB_INT_STATUS   0x188
-#define GPIO_YZAAAB_RESET_TOLERANT 0x18C
-#define GPIO_YZAAAB_DEBOUNCE_1   0x190
-#define GPIO_YZAAAB_DEBOUNCE_2   0x194
-#define GPIO_YZAAAB_INPUT_MASK   0x198
-#define GPIO_AC_COMMAND_SRC_0    0x1A0
-#define GPIO_AC_COMMAND_SRC_1    0x1A4
-#define GPIO_AC_INT_ENABLE       0x1A8
-#define GPIO_AC_INT_SENS_0       0x1AC
-#define GPIO_AC_INT_SENS_1       0x1B0
-#define GPIO_AC_INT_SENS_2       0x1B4
-#define GPIO_AC_INT_STATUS       0x1B8
-#define GPIO_AC_RESET_TOLERANT   0x1BC
-#define GPIO_AC_DEBOUNCE_1       0x1C0
-#define GPIO_AC_DEBOUNCE_2       0x1C4
-#define GPIO_AC_INPUT_MASK       0x1C8
-#define GPIO_ABCD_INPUT_MASK     0x1D0
-#define GPIO_EFGH_INPUT_MASK     0x1D4
-#define GPIO_YZAAAB_DATA_VALUE   0x1E0
-#define GPIO_YZAAAB_DIRECTION    0x1E4
-#define GPIO_AC_DATA_VALUE       0x1E8
-#define GPIO_AC_DIRECTION        0x1EC
+#define GPIO_ABCD_DATA_VALUE     0x000 >> 2
+#define GPIO_ABCD_DIRECTION      0x004 >> 2
+#define GPIO_ABCD_INT_ENABLE     0x008 >> 2
+#define GPIO_ABCD_INT_SENS_0     0x00C >> 2
+#define GPIO_ABCD_INT_SENS_1     0x010 >> 2
+#define GPIO_ABCD_INT_SENS_2     0x014 >> 2
+#define GPIO_ABCD_INT_STATUS     0x018 >> 2
+#define GPIO_ABCD_RESET_TOLERANT 0x01C >> 2
+#define GPIO_EFGH_DATA_VALUE     0x020 >> 2
+#define GPIO_EFGH_DIRECTION      0x024 >> 2
+#define GPIO_EFGH_INT_ENABLE     0x028 >> 2
+#define GPIO_EFGH_INT_SENS_0     0x02C >> 2
+#define GPIO_EFGH_INT_SENS_1     0x030 >> 2
+#define GPIO_EFGH_INT_SENS_2     0x034 >> 2
+#define GPIO_EFGH_INT_STATUS     0x038 >> 2
+#define GPIO_EFGH_RESET_TOL      0x03C >> 2
+#define GPIO_ABCD_DEBOUNCE_1     0x040 >> 2
+#define GPIO_ABCD_DEBOUNCE_2     0x044 >> 2
+#define GPIO_EFGH_DEBOUNCE_1     0x048 >> 2
+#define GPIO_EFGH_DEBOUNCE_2     0x04C >> 2
+#define GPIO_DEBOUNCE_TIME_1     0x050 >> 2
+#define GPIO_DEBOUNCE_TIME_2     0x054 >> 2
+#define GPIO_DEBOUNCE_TIME_3     0x058 >> 2
+#define GPIO_ABCD_COMMAND_SRC_0  0x060 >> 2
+#define GPIO_ABCD_COMMAND_SRC_1  0x064 >> 2
+#define GPIO_EFGH_COMMAND_SRC_0  0x068 >> 2
+#define GPIO_EFGH_COMMAND_SRC_1  0x06C >> 2
+#define GPIO_IJKL_DATA_VALUE     0x070 >> 2
+#define GPIO_IJKL_DIRECTION      0x074 >> 2
+#define GPIO_MNOP_DATA_VALUE     0x078 >> 2
+#define GPIO_MNOP_DIRECTION      0x07C >> 2
+#define GPIO_QRST_DATA_VALUE     0x080 >> 2
+#define GPIO_QRST_DIRECTION      0x084 >> 2
+#define GPIO_UVWX_DATA_VALUE     0x088 >> 2
+#define GPIO_UWVX_DIRECTION      0x08C >> 2
+#define GPIO_IJKL_COMMAND_SRC_0  0x090 >> 2
+#define GPIO_IJKL_COMMAND_SRC_1  0x094 >> 2
+#define GPIO_IJKL_INT_ENABLE     0x098 >> 2
+#define GPIO_IJKL_INT_SENS_0     0x09C >> 2
+#define GPIO_IJKL_INT_SENS_1     0x0A0 >> 2
+#define GPIO_IJKL_INT_SENS_2     0x0A4 >> 2
+#define GPIO_IJKL_INT_STATUS     0x0A8 >> 2
+#define GPIO_IJKL_RESET_TOLERANT 0x0AC >> 2
+#define GPIO_IJKL_DEBOUNCE_1     0x0B0 >> 2
+#define GPIO_IJKL_DEBOUNCE_2     0x0B4 >> 2
+#define GPIO_IJKL_INPUT_MASK     0x0B8 >> 2
+#define GPIO_ABCD_DATA_READ      0x0C0 >> 2
+#define GPIO_EFGH_DATA_READ      0x0C4 >> 2
+#define GPIO_IJKL_DATA_READ      0x0C8 >> 2
+#define GPIO_MNOP_DATA_READ      0x0CC >> 2
+#define GPIO_QRST_DATA_READ      0x0D0 >> 2
+#define GPIO_UVWX_DATA_READ      0x0D4 >> 2
+#define GPIO_YZAAAB_DATA_READ    0x0D8 >> 2
+#define GPIO_AC_DATA_READ        0x0DC >> 2
+#define GPIO_MNOP_COMMAND_SRC_0  0x0E0 >> 2
+#define GPIO_MNOP_COMMAND_SRC_1  0x0E4 >> 2
+#define GPIO_MNOP_INT_ENABLE     0x0E8 >> 2
+#define GPIO_MNOP_INT_SENS_0     0x0EC >> 2
+#define GPIO_MNOP_INT_SENS_1     0x0F0 >> 2
+#define GPIO_MNOP_INT_SENS_2     0x0F4 >> 2
+#define GPIO_MNOP_INT_STATUS     0x0F8 >> 2
+#define GPIO_MNOP_RESET_TOLERANT 0x0FC >> 2
+#define GPIO_MNOP_DEBOUNCE_1     0x100 >> 2
+#define GPIO_MNOP_DEBOUNCE_2     0x104 >> 2
+#define GPIO_MNOP_INPUT_MASK     0x108 >> 2
+#define GPIO_QRST_COMMAND_SRC_0  0x110 >> 2
+#define GPIO_QRST_COMMAND_SRC_1  0x114 >> 2
+#define GPIO_QRST_INT_ENABLE     0x118 >> 2
+#define GPIO_QRST_INT_SENS_0     0x11C >> 2
+#define GPIO_QRST_INT_SENS_1     0x120 >> 2
+#define GPIO_QRST_INT_SENS_2     0x124 >> 2
+#define GPIO_QRST_INT_STATUS     0x128 >> 2
+#define GPIO_QRST_RESET_TOLERANT 0x12C >> 2
+#define GPIO_QRST_DEBOUNCE_1     0x130 >> 2
+#define GPIO_QRST_DEBOUNCE_2     0x134 >> 2
+#define GPIO_QRST_INPUT_MASK     0x138 >> 2
+#define GPIO_UVWX_COMMAND_SRC_0  0x140 >> 2
+#define GPIO_UVWX_COMMAND_SRC_1  0x144 >> 2
+#define GPIO_UVWX_INT_ENABLE     0x148 >> 2
+#define GPIO_UVWX_INT_SENS_0     0x14C >> 2
+#define GPIO_UVWX_INT_SENS_1     0x150 >> 2
+#define GPIO_UVWX_INT_SENS_2     0x154 >> 2
+#define GPIO_UVWX_INT_STATUS     0x158 >> 2
+#define GPIO_UVWX_RESET_TOLERANT 0x15C >> 2
+#define GPIO_UVWX_DEBOUNCE_1     0x160 >> 2
+#define GPIO_UVWX_DEBOUNCE_2     0x164 >> 2
+#define GPIO_UVWX_INPUT_MASK     0x168 >> 2
+#define GPIO_YZAAAB_COMMAND_SRC_0 0x170 >> 2
+#define GPIO_YZAAAB_COMMAND_SRC_1 0x174 >> 2
+#define GPIO_YZAAAB_INT_ENABLE   0x178 >> 2
+#define GPIO_YZAAAB_INT_SENS_0   0x17C >> 2
+#define GPIO_YZAAAB_INT_SENS_1   0x180 >> 2
+#define GPIO_YZAAAB_INT_SENS_2   0x184 >> 2
+#define GPIO_YZAAAB_INT_STATUS   0x188 >> 2
+#define GPIO_YZAAAB_RESET_TOLERANT 0x18C >> 2
+#define GPIO_YZAAAB_DEBOUNCE_1   0x190 >> 2
+#define GPIO_YZAAAB_DEBOUNCE_2   0x194 >> 2
+#define GPIO_YZAAAB_INPUT_MASK   0x198 >> 2
+#define GPIO_AC_COMMAND_SRC_0    0x1A0 >> 2
+#define GPIO_AC_COMMAND_SRC_1    0x1A4 >> 2
+#define GPIO_AC_INT_ENABLE       0x1A8 >> 2
+#define GPIO_AC_INT_SENS_0       0x1AC >> 2
+#define GPIO_AC_INT_SENS_1       0x1B0 >> 2
+#define GPIO_AC_INT_SENS_2       0x1B4 >> 2
+#define GPIO_AC_INT_STATUS       0x1B8 >> 2
+#define GPIO_AC_RESET_TOLERANT   0x1BC >> 2
+#define GPIO_AC_DEBOUNCE_1       0x1C0 >> 2
+#define GPIO_AC_DEBOUNCE_2       0x1C4 >> 2
+#define GPIO_AC_INPUT_MASK       0x1C8 >> 2
+#define GPIO_ABCD_INPUT_MASK     0x1D0 >> 2
+#define GPIO_EFGH_INPUT_MASK     0x1D4 >> 2
+#define GPIO_YZAAAB_DATA_VALUE   0x1E0 >> 2
+#define GPIO_YZAAAB_DIRECTION    0x1E4 >> 2
+#define GPIO_AC_DATA_VALUE       0x1E8 >> 2
+#define GPIO_AC_DIRECTION        0x1EC >> 2
 
 struct AspeedGPIO {
     uint16_t set_idx;
@@ -512,7 +513,7 @@ static void _write_input_mask(AspeedGPIOState *s, GPIORegs *regs,
     aspeed_gpio_update(s, regs);
 }
 
-static const struct AspeedGPIO gpios[0x1f0] = {
+static const struct AspeedGPIO gpios[GPIO_REG_ARRAY_SIZE] = {
     /* Set ABCD */
     [GPIO_ABCD_DATA_VALUE] = {0, read_data_value, _write_data_value},
     [GPIO_ABCD_DIRECTION] = {0, read_direction, _write_direction},
@@ -637,16 +638,28 @@ static const struct AspeedGPIO gpios[0x1f0] = {
     [GPIO_DEBOUNCE_TIME_1] = {-1, NULL, NULL},
 };
 
+static uint64_t aspeed_offset_to_idx(hwaddr offset)
+{
+    if (offset > GPIO_REG_ARRAY_SIZE) {
+        qemu_log_mask(LOG_GUEST_ERROR, "offset %lx out of bounds", offset);
+        return -1;
+    }
+    return offset >> 2;
+}
+
 static uint64_t aspeed_gpio_read(void *opaque, hwaddr offset, uint32_t size)
 {
     AspeedGPIOState *s = ASPEED_GPIO(opaque);
+    uint64_t idx = -1;
     uint32_t val = 0;
 
     if (size != 4) {
         return 0;
     }
 
-    if (gpios[offset].get == NULL) {
+    idx = aspeed_offset_to_idx(offset);
+
+    if ((idx == -1) || (gpios[offset].get == NULL)) {
         qemu_log_mask(LOG_GUEST_ERROR, "no getter for offset %lx", offset);
         return 0;
     }
@@ -660,8 +673,11 @@ static void aspeed_gpio_write(void *opaque, hwaddr offset, uint64_t data,
 {
     AspeedGPIOState *s = ASPEED_GPIO(opaque);
     GPIOSetProperties *props = &s->ctrl->props[gpios[offset].set_idx];
+    uint64_t idx = -1;
 
-    if (gpios[offset].set == NULL) {
+    idx = aspeed_offset_to_idx(offset);
+
+    if ((idx == -1) || (gpios[offset].set == NULL)) {
         qemu_log_mask(LOG_GUEST_ERROR, "no setter for offset %lx", offset);
         return;
     }
