@@ -247,7 +247,7 @@ static const AspeedSoCInfo aspeed_socs[] = {
         .fmc_typename = "aspeed.smc.ast2600-fmc",
         .spi_typename = aspeed_soc_ast2600_typenames,
         .gpio_typename = "aspeed.gpio-ast2600",
-        .wdts_num     = 3,
+        .wdts_num     = 4,
         .irqmap       = aspeed_soc_ast2600_irqmap,
         .memmap       = aspeed_soc_ast2600_memmap,
         .num_cpus     = 2,
@@ -361,7 +361,7 @@ static void aspeed_soc_init(Object *obj)
 
 static void aspeed_soc_realize(DeviceState *dev, Error **errp)
 {
-    int i;
+    int i, offset;
     AspeedSoCState *s = ASPEED_SOC(dev);
     AspeedSoCClass *sc = ASPEED_SOC_GET_CLASS(s);
     Error *err = NULL, *local_err = NULL;
@@ -576,6 +576,7 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->sdmc), 0, sc->info->memmap[ASPEED_SDMC]);
 
     /* Watch dog */
+    offset = ASPEED_IS_AST2600(sc->info->silicon_rev) ? 0x40 : 0x20;
     for (i = 0; i < sc->info->wdts_num; i++) {
         object_property_set_bool(OBJECT(&s->wdt[i]), true, "realized", &err);
         if (err) {
@@ -583,7 +584,7 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
             return;
         }
         sysbus_mmio_map(SYS_BUS_DEVICE(&s->wdt[i]), 0,
-                        sc->info->memmap[ASPEED_WDT] + i * 0x20);
+                        sc->info->memmap[ASPEED_WDT] + i * offset);
     }
 
     /* Net */
