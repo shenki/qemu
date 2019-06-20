@@ -57,6 +57,7 @@ typedef struct AspeedSoCState {
     AspeedWDTState wdt[ASPEED_WDTS_NUM];
     FTGMAC100State ftgmac100[ASPEED_MACS_NUM];
     AspeedGPIOState gpio;
+    AspeedMiiState mii;
     AspeedIBTState ibt;
     AspeedPWMState pwm;
     AspeedLPCState lpc;
