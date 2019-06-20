@@ -87,6 +87,30 @@
 #define BMC_REV              TO_REG(0x19C)
 #define BMC_DEV_ID           TO_REG(0x1A4)
 
+#define AST2600_PROT_KEY          TO_REG(0x00)
+#define AST2600_SILICON_REV       TO_REG(0x04)
+#define AST2600_SYS_RST_CTRL      TO_REG(0x40)
+#define AST2600_SYS_RST_CTRL_CLR  TO_REG(0x44)
+#define AST2600_SYS_RST_CTRL2     TO_REG(0x50)
+#define AST2600_SYS_RST_CTRL2_CLR TO_REG(0x54)
+#define AST2600_CLK_STOP_CTRL     TO_REG(0x80)
+#define AST2600_CLK_STOP_CTRL_CLR TO_REG(0x84)
+#define AST2600_CLK_STOP_CTRL2     TO_REG(0x90)
+#define AST2600_CLK_STOP_CTR2L_CLR TO_REG(0x94)
+#define AST2600_CLK_SEL           TO_REG(0x300)
+#define AST2600_CLK_SEL2          TO_REG(0x304)
+#define AST2600_CLK_SEL3          TO_REG(0x310)
+#define AST2600_HW_STRAP1         TO_REG(0x500)
+#define AST2600_HW_STRAP1_CLR     TO_REG(0x504)
+#define AST2600_HW_STRAP1_PROT    TO_REG(0x508)
+#define AST2600_HW_STRAP2         TO_REG(0x510)
+#define AST2600_HW_STRAP2_CLR     TO_REG(0x514)
+#define AST2600_HW_STRAP2_PROT    TO_REG(0x518)
+#define AST2600_RNG_CTRL          TO_REG(0x524)
+#define AST2600_RNG_DATA          TO_REG(0x540)
+
+#define AST2600_CLK TO_REG(0x40)
+
 #define SCU_IO_REGION_SIZE 0x1000
 
 static const uint32_t ast2400_a0_resets[ASPEED_SCU_NR_REGS] = {
@@ -156,6 +180,13 @@ static const uint32_t ast2500_a1_resets[ASPEED_SCU_NR_REGS] = {
      [BMC_DEV_ID]      = 0x00002402U
 };
 
+static const uint32_t ast2600_a0_resets[ASPEED_AST2600_SCU_NR_REGS] = {
+    [AST2600_SYS_RST_CTRL]      = 0xF7CFFEDC | 0x100,
+    [AST2600_SYS_RST_CTRL2]     = 0xFFFFFFFC,
+    [AST2600_CLK_STOP_CTRL]     = 0xEFF43E8B,
+    [AST2600_CLK_STOP_CTRL2]    = 0xFFF0FFF0,
+};
+
 static uint32_t aspeed_scu_get_random(void)
 {
     uint32_t num;
@@ -176,6 +207,9 @@ static void aspeed_scu_set_apb_freq(AspeedSCUState *s)
     case AST2500_A1_SILICON_REV:
         apb_divider = 4;
         break;
+    case AST2600_A0_SILICON_REV: /* TODO */
+        apb_divider = 4;
+        break;
     default:
         g_assert_not_reached();
     }
@@ -184,12 +218,42 @@ static void aspeed_scu_set_apb_freq(AspeedSCUState *s)
         / apb_divider;
 }
 
-static uint64_t aspeed_scu_read(void *opaque, hwaddr offset, unsigned size)
+static uint64_t aspeed_ast2600_scu_read(void *opaque, hwaddr offset, unsigned size)
 {
     AspeedSCUState *s = ASPEED_SCU(opaque);
     int reg = TO_REG(offset);
 
-    if (reg >= ARRAY_SIZE(s->regs)) {
+    if (reg >= ASPEED_AST2600_SCU_NR_REGS) {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: Out-of-bounds read at offset 0x%" HWADDR_PRIx "\n",
+                      __func__, offset);
+        return 0;
+    }
+
+    switch (reg) {
+    case AST2600_RNG_DATA:
+        /* On hardware, RNG_DATA works regardless of
+         * the state of the enable bit in RNG_CTRL
+         * TODO: Check this is true for ast2600
+         */
+        s->regs[AST2600_RNG_DATA] = aspeed_scu_get_random();
+        break;
+    case WAKEUP_EN:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: Read of write-only offset 0x%" HWADDR_PRIx "\n",
+                      __func__, offset);
+        break;
+    }
+
+    return s->regs[reg];
+}
+
+static uint64_t aspeed_ast2400_scu_read(void *opaque, hwaddr offset, unsigned size)
+{
+    AspeedSCUState *s = ASPEED_SCU(opaque);
+    int reg = TO_REG(offset);
+
+    if (reg >= ASPEED_SCU_NR_REGS) {
         qemu_log_mask(LOG_GUEST_ERROR,
                       "%s: Out-of-bounds read at offset 0x%" HWADDR_PRIx "\n",
                       __func__, offset);
@@ -213,13 +277,13 @@ static uint64_t aspeed_scu_read(void *opaque, hwaddr offset, unsigned size)
     return s->regs[reg];
 }
 
-static void aspeed_scu_write(void *opaque, hwaddr offset, uint64_t data,
-                             unsigned size)
+/* Implements ast2400/ast2500 generation register layout */
+static void aspeed_ast2400_scu_write(void *opaque, uint64_t offset, uint64_t data, unsigned size)
 {
     AspeedSCUState *s = ASPEED_SCU(opaque);
     int reg = TO_REG(offset);
 
-    if (reg >= ARRAY_SIZE(s->regs)) {
+    if (reg >= ASPEED_SCU_NR_REGS) {
         qemu_log_mask(LOG_GUEST_ERROR,
                       "%s: Out-of-bounds write at offset 0x%" HWADDR_PRIx "\n",
                       __func__, offset);
@@ -272,9 +336,72 @@ static void aspeed_scu_write(void *opaque, hwaddr offset, uint64_t data,
     s->regs[reg] = data;
 }
 
+/* Implements ast2600 generation register layout */
+static void aspeed_ast2600_scu_write(void *opaque, uint64_t offset,
+        uint64_t data, unsigned size)
+{
+    AspeedSCUState *s = ASPEED_SCU(opaque);
+    int reg = TO_REG(offset);
+
+    if (reg >= ASPEED_AST2600_SCU_NR_REGS) {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: Out-of-bounds write at offset 0x%" HWADDR_PRIx "\n",
+                      __func__, offset);
+        return;
+    }
+
+    if (reg > PROT_KEY && !s->regs[PROT_KEY]) {
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: SCU is locked!\n", __func__);
+    }
+
+    trace_aspeed_scu_write(offset, size, data);
+
+    switch (reg) {
+    case AST2600_PROT_KEY:
+        s->regs[reg] = (data == ASPEED_SCU_PROT_KEY) ? 1 : 0;
+        return;
+    case AST2600_HW_STRAP1:
+    case AST2600_HW_STRAP2:
+        if (s->regs[reg+2])
+            return;
+        /* fall through */
+    case AST2600_SYS_RST_CTRL:
+    case AST2600_SYS_RST_CTRL2:
+        /* W1S (Write 1 to set) registers */
+        s->regs[reg] |= data;
+        return;
+    case AST2600_SYS_RST_CTRL_CLR:
+    case AST2600_SYS_RST_CTRL2_CLR:
+    case AST2600_HW_STRAP1_CLR:
+    case AST2600_HW_STRAP2_CLR:
+        /* W1C (Write 1 to clear) registers */
+        s->regs[reg] &= ~data;
+        return;
+
+    case AST2600_RNG_DATA:
+    case AST2600_SILICON_REV:
+        /* Add read only registers here */
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: Write to read-only offset 0x%" HWADDR_PRIx "\n",
+                      __func__, offset);
+        return;
+    }
+
+    s->regs[reg] = data;
+}
+
 static const MemoryRegionOps aspeed_scu_ops = {
-    .read = aspeed_scu_read,
-    .write = aspeed_scu_write,
+    .read = aspeed_ast2400_scu_read,
+    .write = aspeed_ast2400_scu_write,
+    .endianness = DEVICE_LITTLE_ENDIAN,
+    .valid.min_access_size = 4,
+    .valid.max_access_size = 4,
+    .valid.unaligned = false,
+};
+
+static const MemoryRegionOps aspeed_ast2600_scu_ops = {
+    .read = aspeed_ast2600_scu_read,
+    .write = aspeed_ast2600_scu_write,
     .endianness = DEVICE_LITTLE_ENDIAN,
     .valid.min_access_size = 4,
     .valid.max_access_size = 4,
@@ -352,7 +479,25 @@ static uint32_t aspeed_scu_calc_hpll_ast2500(AspeedSCUState *s)
     return s->clkin * multiplier;
 }
 
-static void aspeed_scu_reset(DeviceState *dev)
+static void aspeed_ast2600_scu_reset(void *dev)
+{
+    AspeedSCUState *s = ASPEED_SCU(dev);
+
+    memcpy(s->regs, ast2600_a0_resets, ASPEED_AST2600_SCU_NR_REGS * 4);
+    s->regs[AST2600_SILICON_REV] = s->silicon_rev;
+    s->regs[AST2600_HW_STRAP1] = s->hw_strap1;
+    s->regs[AST2600_HW_STRAP2] = s->hw_strap2;
+    s->regs[AST2600_PROT_KEY] = s->hw_prot_key;
+
+    /*
+     * All registers are set. Now compute the frequencies of the main clocks
+     */
+    s->clkin = aspeed_scu_get_clkin(s);
+    s->hpll = aspeed_scu_calc_hpll_ast2500(s);
+    aspeed_scu_set_apb_freq(s);
+}
+
+static void aspeed_scu_reset(void *dev)
 {
     AspeedSCUState *s = ASPEED_SCU(dev);
     const uint32_t *reset;
@@ -369,11 +514,15 @@ static void aspeed_scu_reset(DeviceState *dev)
         reset = ast2500_a1_resets;
         calc_hpll = aspeed_scu_calc_hpll_ast2500;
         break;
+    case AST2600_A0_SILICON_REV: /* TODO */
+        reset = ast2600_a0_resets;
+        calc_hpll = aspeed_scu_calc_hpll_ast2500;
+        break;
     default:
         g_assert_not_reached();
     }
 
-    memcpy(s->regs, reset, sizeof(s->regs));
+    memcpy(s->regs, reset, ASPEED_SCU_NR_REGS * 4);
     s->regs[SILICON_REV] = s->silicon_rev;
     s->regs[HW_STRAP1] = s->hw_strap1;
     s->regs[HW_STRAP2] = s->hw_strap2;
@@ -392,6 +541,7 @@ static uint32_t aspeed_silicon_revs[] = {
     AST2400_A1_SILICON_REV,
     AST2500_A0_SILICON_REV,
     AST2500_A1_SILICON_REV,
+    AST2600_A0_SILICON_REV,
 };
 
 bool is_supported_silicon_rev(uint32_t silicon_rev)
@@ -411,14 +561,25 @@ static void aspeed_scu_realize(DeviceState *dev, Error **errp)
 {
     SysBusDevice *sbd = SYS_BUS_DEVICE(dev);
     AspeedSCUState *s = ASPEED_SCU(dev);
+    const MemoryRegionOps *ops;
 
     if (!is_supported_silicon_rev(s->silicon_rev)) {
         error_setg(errp, "Unknown silicon revision: 0x%" PRIx32,
                 s->silicon_rev);
         return;
     }
+    if (ASPEED_IS_AST2400(s->silicon_rev)
+            || ASPEED_IS_AST2500(s->silicon_rev)) {
+        ops = &aspeed_scu_ops;
+        qemu_register_reset(aspeed_scu_reset, dev);
+    } else if (ASPEED_IS_AST2600(s->silicon_rev)) {
+        ops = &aspeed_ast2600_scu_ops;
+        qemu_register_reset(aspeed_ast2600_scu_reset, dev);
+    } else {
+        g_assert_not_reached();
+    }
 
-    memory_region_init_io(&s->iomem, OBJECT(s), &aspeed_scu_ops, s,
+    memory_region_init_io(&s->iomem, OBJECT(s), ops, s,
                           TYPE_ASPEED_SCU, SCU_IO_REGION_SIZE);
 
     sysbus_init_mmio(sbd, &s->iomem);
@@ -427,7 +588,12 @@ static void aspeed_scu_realize(DeviceState *dev, Error **errp)
      * Reset on realize to ensure the APB clock value is calculated in time for
      * use by the timer model, which is reset before the SCU.
      */
-    aspeed_scu_reset(dev);
+    if (ASPEED_IS_AST2400(s->silicon_rev)
+            || ASPEED_IS_AST2500(s->silicon_rev)) {
+        aspeed_scu_reset(dev);
+    }
+
+
 }
 
 static const VMStateDescription vmstate_aspeed_scu = {
@@ -435,7 +601,7 @@ static const VMStateDescription vmstate_aspeed_scu = {
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32_ARRAY(regs, AspeedSCUState, ASPEED_SCU_NR_REGS),
+        VMSTATE_UINT32_ARRAY(regs, AspeedSCUState, ASPEED_AST2600_SCU_NR_REGS),
         VMSTATE_END_OF_LIST()
     }
 };
@@ -452,7 +618,6 @@ static void aspeed_scu_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     dc->realize = aspeed_scu_realize;
-    dc->reset = aspeed_scu_reset;
     dc->desc = "ASPEED System Control Unit";
     dc->vmsd = &vmstate_aspeed_scu;
     dc->props = aspeed_scu_properties;
