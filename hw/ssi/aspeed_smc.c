@@ -210,6 +210,30 @@ static const AspeedSegments aspeed_segments_ast2500_spi2[] = {
     { 0x3A000000, 96 * 1024 * 1024 }, /* end address is readonly */
 };
 
+/*
+ * AST2600 definitions
+ *
+ *
+ */
+#define ASPEED26_SOC_FMC_FLASH_BASE   0x20000000
+#define ASPEED26_SOC_SPI_FLASH_BASE   0x30000000
+#define ASPEED26_SOC_SPI2_FLASH_BASE  0x50000000
+
+static const AspeedSegments aspeed_segments_ast2600_fmc[] = {
+    { 0x20000000, 128 * 1024 * 1024 }, /* start address is readonly */
+    { 0x28000000, 128 * 1024 * 1024 },  /* TODO: disabled */
+};
+
+static const AspeedSegments aspeed_segments_ast2600_spi1[] = {
+    { 0x30000000, 128 * 1024 * 1024 }, /* start address is readonly */
+    { 0x58000000, 128 * 1024 * 1024 }, /* TODO: disabled */
+};
+
+static const AspeedSegments aspeed_segments_ast2600_spi2[] = {
+    { 0x50000000, 128 * 1024 * 1024 }, /* start address is readonly */
+    { 0x58000000, 128 * 1024 * 1024 }, /* TODO: disabled */
+};
+
 static const AspeedSMCController controllers[] = {
     {
         .name              = "aspeed.smc.smc",
@@ -291,6 +315,45 @@ static const AspeedSMCController controllers[] = {
         .segments          = aspeed_segments_ast2500_spi2,
         .flash_window_base = ASPEED_SOC_SPI2_FLASH_BASE,
         .flash_window_size = 0x8000000,
+        .has_dma           = false,
+        .nregs             = ASPEED_SMC_R_MAX,
+    }, {
+        .name              = "aspeed.smc.ast2600-fmc",
+        .r_conf            = R_CONF,
+        .r_ce_ctrl         = R_CE_CTRL,
+        .r_ctrl0           = R_CTRL0,
+        .r_timings         = R_TIMINGS,
+        .conf_enable_w0    = CONF_ENABLE_W0,
+        .max_slaves        = 3,
+        .segments          = aspeed_segments_ast2600_fmc,
+        .flash_window_base = ASPEED26_SOC_FMC_FLASH_BASE,
+        .flash_window_size = 0x10000000,
+        .has_dma           = true,
+        .nregs             = ASPEED_SMC_R_MAX,
+    }, {
+        .name              = "aspeed.smc.ast2600-spi1",
+        .r_conf            = R_CONF,
+        .r_ce_ctrl         = R_CE_CTRL,
+        .r_ctrl0           = R_CTRL0,
+        .r_timings         = R_TIMINGS,
+        .conf_enable_w0    = CONF_ENABLE_W0,
+        .max_slaves        = 2,
+        .segments          = aspeed_segments_ast2600_spi1,
+        .flash_window_base = ASPEED26_SOC_SPI_FLASH_BASE,
+        .flash_window_size = 0x10000000,
+        .has_dma           = false,
+        .nregs             = ASPEED_SMC_R_MAX,
+    }, {
+        .name              = "aspeed.smc.ast2600-spi2",
+        .r_conf            = R_CONF,
+        .r_ce_ctrl         = R_CE_CTRL,
+        .r_ctrl0           = R_CTRL0,
+        .r_timings         = R_TIMINGS,
+        .conf_enable_w0    = CONF_ENABLE_W0,
+        .max_slaves        = 3,
+        .segments          = aspeed_segments_ast2600_spi2,
+        .flash_window_base = ASPEED26_SOC_SPI2_FLASH_BASE,
+        .flash_window_size = 0x10000000,
         .has_dma           = false,
         .nregs             = ASPEED_SMC_R_MAX,
     },
