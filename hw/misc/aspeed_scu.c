@@ -223,11 +223,6 @@ static uint64_t aspeed_ast2600_scu_read(void *opaque, hwaddr offset, unsigned si
          */
         s->regs[AST2600_RNG_DATA] = aspeed_scu_get_random();
         break;
-    case WAKEUP_EN:
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: Read of write-only offset 0x%" HWADDR_PRIx "\n",
-                      __func__, offset);
-        break;
     }
 
     return s->regs[reg];
