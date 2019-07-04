@@ -843,6 +843,12 @@ static GPIOSetProperties ast2500_set_props[] = {
 
 static AspeedGPIOController controllers[] = {
     {
+        .name           = TYPE_ASPEED_GPIO "-ast2600",
+        .props          = ast2500_set_props,
+        .nr_gpio_pins   = 228,
+        .nr_gpio_sets   = 8,
+        .gap            = 220,
+    }, {
         .name           = TYPE_ASPEED_GPIO "-ast2500",
         .props          = ast2500_set_props,
         .nr_gpio_pins   = 228,
