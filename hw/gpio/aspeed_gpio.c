@@ -46,7 +46,7 @@
 #include "qapi/visitor.h"
 
 #define ASPEED_GPIOS_PER_REG 32
-#define GPIO_REG_ARRAY_SIZE 0x1f0/4
+#define GPIO_REG_ARRAY_SIZE 0x3d8/4
 
 /* GPIO Source Types */
 #define ASPEED_CMD_SRC_MASK         0x01010101
@@ -179,6 +179,41 @@
 #define GPIO_AC_DATA_VALUE       0x1E8 >> 2
 #define GPIO_AC_DIRECTION        0x1EC >> 2
 
+/* 1.8V */
+// HACK
+// Actual values are same as ABCD and E above + 0x800
+#define GPIO_18_ABCD_DATA_VALUE     (0x800-0x600) >> 2
+#define GPIO_18_ABCD_DIRECTION      (0x804-0x600) >> 2
+#define GPIO_18_ABCD_INT_ENABLE     (0x808-0x600) >> 2
+#define GPIO_18_ABCD_INT_SENS_0     (0x80C-0x600) >> 2
+#define GPIO_18_ABCD_INT_SENS_1     (0x810-0x600) >> 2
+#define GPIO_18_ABCD_INT_SENS_2     (0x814-0x600) >> 2
+#define GPIO_18_ABCD_INT_STATUS     (0x818-0x600) >> 2
+#define GPIO_18_ABCD_RESET_TOLERANT (0x81C-0x600) >> 2
+#define GPIO_18_E_DATA_VALUE        (0x820-0x600) >> 2
+#define GPIO_18_E_DIRECTION         (0x824-0x600) >> 2
+#define GPIO_18_E_INT_ENABLE        (0x828-0x600) >> 2
+#define GPIO_18_E_INT_SENS_0        (0x82C-0x600) >> 2
+#define GPIO_18_E_INT_SENS_1        (0x830-0x600) >> 2
+#define GPIO_18_E_INT_SENS_2        (0x834-0x600) >> 2
+#define GPIO_18_E_INT_STATUS        (0x838-0x600) >> 2
+#define GPIO_18_E_RESET_TOL         (0x83C-0x600) >> 2
+#define GPIO_18_ABCD_DEBOUNCE_1     (0x840-0x600) >> 2
+#define GPIO_18_ABCD_DEBOUNCE_2     (0x844-0x600) >> 2
+#define GPIO_18_E_DEBOUNCE_1        (0x848-0x600) >> 2
+#define GPIO_18_E_DEBOUNCE_2        (0x84C-0x600) >> 2
+#define GPIO_18_DEBOUNCE_TIME_1     (0x850-0x600) >> 2
+#define GPIO_18_DEBOUNCE_TIME_2     (0x854-0x600) >> 2
+#define GPIO_18_DEBOUNCE_TIME_3     (0x858-0x600) >> 2
+#define GPIO_18_ABCD_COMMAND_SRC_0  (0x860-0x600) >> 2
+#define GPIO_18_ABCD_COMMAND_SRC_1  (0x864-0x600) >> 2
+#define GPIO_18_E_COMMAND_SRC_0     (0x868-0x600) >> 2
+#define GPIO_18_E_COMMAND_SRC_1     (0x86C-0x600) >> 2
+#define GPIO_18_ABCD_DATA_READ      (0x8C0-0x600) >> 2
+#define GPIO_18_E_DATA_READ         (0x8C4-0x600) >> 2
+#define GPIO_18_ABCD_INPUT_MASK     (0x9D0-0x600) >> 2
+#define GPIO_18_E_INPUT_MASK        (0x9D4-0x600) >> 2
+
 struct AspeedGPIO {
     uint16_t set_idx;
     uint32_t (*get)(GPIORegs *regs);
@@ -260,7 +295,7 @@ static void aspeed_gpio_update(AspeedGPIOState *s, GPIORegs *regs)
 
 static uint32_t aspeed_adjust_pin(AspeedGPIOState *s, uint32_t pin)
 {
-    if (pin >= s->ctrl->gap) {
+    if (s->ctrl->gap && pin >= s->ctrl->gap) {
         pin += 4;
     }
 
@@ -636,13 +671,48 @@ static const struct AspeedGPIO gpios[GPIO_REG_ARRAY_SIZE] = {
     [GPIO_AC_INPUT_MASK] = {7, read_input_mask,     _write_input_mask},
     /* Debounce registers */
     [GPIO_DEBOUNCE_TIME_1] = {-1, NULL, NULL},
+    /* 1.8V Set ABCD */
+    [GPIO_18_ABCD_DATA_VALUE] = {0, read_data_value, _write_data_value},
+    [GPIO_18_ABCD_DIRECTION] = {0, read_direction, _write_direction},
+    [GPIO_18_ABCD_INT_ENABLE] = {0, read_int_enable, _write_int_enable},
+    [GPIO_18_ABCD_INT_SENS_0] = {0, read_int_sens_0, _write_int_sens_0},
+    [GPIO_18_ABCD_INT_SENS_1] = {0, read_int_sens_1, _write_int_sens_1},
+    [GPIO_18_ABCD_INT_SENS_2] = {0, read_int_sens_2, _write_int_sens_2},
+    [GPIO_18_ABCD_INT_STATUS] = {0, read_int_status, _write_int_status},
+    [GPIO_18_ABCD_RESET_TOLERANT] = {0, read_reset_tol, _write_reset_tol},
+    [GPIO_18_ABCD_DEBOUNCE_1] = {0, read_debounce_1, _write_debounce_1},
+    [GPIO_18_ABCD_DEBOUNCE_2] = {0, read_debounce_2, _write_debounce_2},
+    [GPIO_18_ABCD_COMMAND_SRC_0] = {0, read_cmd_source_0, _write_cmd_source_0},
+    [GPIO_18_ABCD_COMMAND_SRC_1] = {0, read_cmd_source_1, _write_cmd_source_1},
+    [GPIO_18_ABCD_DATA_READ] = {0, read_data, NULL},
+    [GPIO_18_ABCD_INPUT_MASK] = {0, read_input_mask, _write_input_mask},
+    /* 1.8V Set E */
+    [GPIO_18_E_DATA_VALUE] = {1, read_data_value, _write_data_value},
+    [GPIO_18_E_DIRECTION] = {1, read_direction, _write_direction },
+    [GPIO_18_E_INT_ENABLE] = {1, read_int_enable, _write_int_enable},
+    [GPIO_18_E_INT_SENS_0] = {1, read_int_sens_0, _write_int_sens_0},
+    [GPIO_18_E_INT_SENS_1] = {1, read_int_sens_1, _write_int_sens_1},
+    [GPIO_18_E_INT_SENS_2] = {1, read_int_sens_2, _write_int_sens_2},
+    [GPIO_18_E_INT_STATUS] = {1, read_int_status, _write_int_status},
+    [GPIO_18_E_RESET_TOL] = {1, read_reset_tol,   _write_reset_tol},
+    [GPIO_18_E_DEBOUNCE_1] = {1, read_debounce_1,  _write_debounce_1},
+    [GPIO_18_E_DEBOUNCE_2] = {1, read_debounce_2,  _write_debounce_2},
+    [GPIO_18_E_COMMAND_SRC_0] = {1, read_cmd_source_0,  _write_cmd_source_0},
+    [GPIO_18_E_COMMAND_SRC_1] = {1, read_cmd_source_1,  _write_cmd_source_1},
+    [GPIO_18_E_DATA_READ] = {1, read_data, NULL},
+    [GPIO_18_E_INPUT_MASK] = {1, read_input_mask,  _write_input_mask},
 };
 
 static uint64_t aspeed_offset_to_idx(hwaddr offset)
 {
     if (offset > GPIO_REG_ARRAY_SIZE) {
-        qemu_log_mask(LOG_GUEST_ERROR, "offset %lx out of bounds", offset);
-        return -1;
+        /* HACK */
+        if (offset >= 0x800 && offset < 0x9D8) {
+            return (offset - 600) >> 2;
+        } else {
+            qemu_log_mask(LOG_GUEST_ERROR, "offset %lx out of bounds", offset);
+            return -1;
+        }
     }
     return offset >> 2;
 }
@@ -841,13 +911,25 @@ static GPIOSetProperties ast2500_set_props[] = {
     [7] = {0x000000ff,  0x000000ff,  {"AC"} },
 };
 
+static GPIOSetProperties ast2600_set_props[] = {
+    [0] = {0xffffffff,  0xffffffff,  {"A", "B", "C", "D"} },
+    [1] = {0xffffffff,  0xffffffff,  {"E", "F", "G", "H"} },
+    [2] = {0xffffffff,  0xffffffff,  {"I", "J", "K", "L"} },
+    [3] = {0xffffffff,  0xffffffff,  {"M", "N", "O", "P"} },
+    [4] = {0xffffffff,  0xffffffff,  {"Q", "R", "S", "T"} },
+    [5] = {0xffffffff,  0x0000ffff,  {"U", "V", "W", "X"} },
+    [6] = {0xffff0000,  0x0fff0000,  {"Y", "Z", "", ""} },
+    /* 1.8V */
+    [7] = {0x000000ff,  0x000000ff,  {"A", "B", "C", "D"} },
+    [8] = {0x000000ff,  0x000000ff,  {"E"} },
+};
+
 static AspeedGPIOController controllers[] = {
     {
         .name           = TYPE_ASPEED_GPIO "-ast2600",
-        .props          = ast2500_set_props,
-        .nr_gpio_pins   = 228,
-        .nr_gpio_sets   = 8,
-        .gap            = 220,
+        .props          = ast2600_set_props,
+        .nr_gpio_pins   = 208,
+        .nr_gpio_sets   = 7,
     }, {
         .name           = TYPE_ASPEED_GPIO "-ast2500",
         .props          = ast2500_set_props,
