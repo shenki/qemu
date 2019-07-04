@@ -333,6 +333,18 @@ static void aspeed_soc_init(Object *obj)
                               TYPE_SYSBUS_SDHCI);
     }
 
+    if (ASPEED_IS_AST2600(sc->info->silicon_rev)) {
+        sysbus_init_child_obj(obj, "mii", &s->mii, sizeof(s->mii),
+                              TYPE_ASPEED_MII);
+
+        /*
+         * The PHY is still under the FTGMAC100 MAC object. Provide a
+         * NIC0 link to the mdio model.
+         */
+        object_property_add_const_link(OBJECT(&s->mii), "nic",
+                                       OBJECT(&s->ftgmac100[0]), &error_abort);
+    }
+
     sysbus_init_child_obj(obj, "ibt", OBJECT(&s->ibt), sizeof(s->ibt),
                           TYPE_ASPEED_IBT);
 
@@ -668,6 +680,17 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
                     sc->info->memmap[ASPEED_SDHCI]);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->sdhci), 0,
                        aspeed_soc_get_irq(s, ASPEED_SDHCI));
+
+    if (ASPEED_IS_AST2600(sc->info->silicon_rev)) {
+        object_property_set_bool(OBJECT(&s->mii), true, "realized", &err);
+        if (err) {
+            error_propagate(errp, err);
+            return;
+        }
+
+        sysbus_mmio_map(SYS_BUS_DEVICE(&s->mii), 0,
+                        sc->info->memmap[ASPEED_MII]);
+    }
 
     /* iBT */
     object_property_set_bool(OBJECT(&s->ibt), true, "realized", &err);
