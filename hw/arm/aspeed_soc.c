@@ -399,15 +399,8 @@ static void aspeed_soc_realize(DeviceState *dev, Error **errp)
             object_property_set_int(OBJECT(&s->cpu[i]), QEMU_PSCI_CONDUIT_SMC,
                                     "psci-conduit", &error_abort);
             if (smp_cpus > 1) {
-                printf("%s: setting reset-cbar to 0x1e6e2180\n", __func__);
-                object_property_set_int(OBJECT(&s->cpu[i]), 0x1e6e2180,
+                object_property_set_int(OBJECT(&s->cpu[i]), ASPEED_A7MPCORE_ADDR,
                                         "reset-cbar", &error_abort);
-            }
-
-            if (i) {
-                /* Secondary CPUs start in PSCI powered-down state */
-                object_property_set_bool(OBJECT(&s->cpu[i]), true,
-                                         "start-powered-off", &error_abort);
             }
         }
 
