@@ -116,6 +116,57 @@ static const MemoryRegionOps max_ram_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
+#define AST_SMP_MAILBOX_BASE            0x1E6E2180
+#define AST_SMP_MBOX_FIELD_ENTRY        (AST_SMP_MAILBOX_BASE + 0x0)
+#define AST_SMP_MBOX_FIELD_GOSIGN       (AST_SMP_MAILBOX_BASE + 0x4)
+#define AST_SMP_MBOX_FIELD_READY        (AST_SMP_MAILBOX_BASE + 0x8)
+#define AST_SMP_MBOX_FIELD_POLLINSN     (AST_SMP_MAILBOX_BASE + 0xc)
+#define AST_SMP_MBOX_CODE               (AST_SMP_MAILBOX_BASE + 0x10)
+
+static void aspeed_write_smpboot(ARMCPU *cpu, const struct arm_boot_info *info)
+    {
+    static const uint32_t poll_mailbox_ready[] = {
+        /*
+         * r2 = per-cpu go sign value
+         * r1 = AST_SMP_MBOX_FIELD_ENTRY
+         * r0 = AST_SMP_MBOX_FIELD_GOSIGN
+         */
+        0xee100fb0,  /* mrc     15, 0, r0, cr0, cr0, {5} */
+        0xe21000ff,  /* ands    r0, r0, #255    ; 0xff   */
+        0xe30a2b00,  /* movw    r2, #43776      ; 0xab00 */
+        0xe34a2bba,  /* movt    r2, #43962      ; 0xabba */
+        0xe1822000,  /* orr     r2, r2, r0               */
+
+        0xe3020184,  /*	movw	r0, #8580	; 0x2184 */
+        0xe3410e6e,  /*	movt	r0, #7790	; 0x1e6e */
+
+        0xe3021180,  /*	movw	r1, #8576	; 0x2180 */
+        0xe3411e6e,  /*	movt	r1, #7790	; 0x1e6e */
+
+        0xe320f002,  /* wfe                              */
+        0xe5904000,  /* ldr     r4, [r0]                 */
+        0xe1520004,  /* cmp     r2, r4                   */
+        0x1afffffb,  /* bne     <wfe>                    */
+        0xe591f000,  /* ldr     pc, [r1]                 */
+    };
+
+    rom_add_blob_fixed("aspeed.smpboot",
+                poll_mailbox_ready,
+                sizeof(poll_mailbox_ready),
+                info->smp_loader_start);
+}
+
+static void aspeed_reset_secondary(ARMCPU *cpu, const struct arm_boot_info *info)
+{
+    AddressSpace *as = arm_boot_address_space(cpu, info);
+    CPUState *cs = CPU(cpu);
+
+    /* info->smp_bootreg_addr */
+    address_space_stl_notdirty(as, AST_SMP_MBOX_FIELD_GOSIGN, 0,
+                               MEMTXATTRS_UNSPECIFIED, NULL);
+    cpu_set_pc(cs, info->smp_loader_start);
+}
+
 #define FIRMWARE_ADDR 0x0
 
 static void write_boot_rom(DriveInfo *dinfo, hwaddr addr, size_t rom_size,
@@ -268,6 +319,19 @@ static void aspeed_machine_init(MachineState *machine)
                                         boot_rom);
             write_boot_rom(drive0, FIRMWARE_ADDR, fl->size, &error_abort);
         }
+    }
+
+    if (machine->kernel_filename) {
+        /* With no u-boot we must set up a boot stub for the secondry CPU */
+        MemoryRegion *smpboot = g_new(MemoryRegion, 1);
+        memory_region_init_ram(smpboot, OBJECT(bmc), "aspeed.smpboot",
+                               0x80, &error_abort);
+        memory_region_add_subregion(get_system_memory(),
+                                    AST_SMP_MAILBOX_BASE, smpboot);
+
+        aspeed_board_binfo.write_secondary_boot = aspeed_write_smpboot;
+        aspeed_board_binfo.secondary_cpu_reset_hook = aspeed_reset_secondary;
+        aspeed_board_binfo.smp_loader_start = AST_SMP_MBOX_CODE;
     }
 
     aspeed_board_binfo.ram_size = ram_size;
