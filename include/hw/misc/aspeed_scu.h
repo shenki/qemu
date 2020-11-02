@@ -44,6 +44,7 @@ struct AspeedSCUState {
 #define AST2600_A0_SILICON_REV   0x05000303U
 #define AST2600_A1_SILICON_REV   0x05010303U
 
+#define ASPEED_IS_AST2400(si_rev)     ((((si_rev) >> 24) & 0xff) == 0x02)
 #define ASPEED_IS_AST2500(si_rev)     ((((si_rev) >> 24) & 0xff) == 0x04)
 
 extern bool is_supported_silicon_rev(uint32_t silicon_rev);
