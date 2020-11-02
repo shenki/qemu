@@ -112,6 +112,7 @@ struct AspeedSMCState {
 
     AspeedSMCFlash *flashes;
 
+    uint8_t snoop_addr_width;
     uint8_t snoop_index;
     uint8_t snoop_dummies;
 };

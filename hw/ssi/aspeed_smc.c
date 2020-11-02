@@ -778,10 +778,15 @@ typedef enum {
     PP = 0x2,           PP_4 = 0x12,
     DPP = 0xa2,
     QPP = 0x32,         QPP_4 = 0x34,
+    RDSFDP = 0x5a,
 } FlashCMD;
 
-static int aspeed_smc_num_dummies(uint8_t command)
+static int aspeed_smc_num_dummies(AspeedSMCFlash *fl, uint8_t command)
 {
+    AspeedSMCState *s = fl->controller;
+
+    s->snoop_addr_width = aspeed_smc_flash_is_4byte(fl) ? 4 : 3;
+
     switch (command) { /* check for dummies */
     case READ: /* no dummy bytes/cycles */
     case PP:
@@ -798,6 +803,9 @@ static int aspeed_smc_num_dummies(uint8_t command)
     case DOR_4:
     case QOR_4:
         return 1;
+    case RDSFDP:
+        s->snoop_addr_width = 3;
+        return 1;
     case DIOR:
     case DIOR_4:
         return 2;
@@ -813,8 +821,6 @@ static bool aspeed_smc_do_snoop(AspeedSMCFlash *fl,  uint64_t data,
                                 unsigned size)
 {
     AspeedSMCState *s = fl->controller;
-    uint8_t addr_width = aspeed_smc_flash_is_4byte(fl) ? 4 : 3;
-
     trace_aspeed_smc_do_snoop(fl->id, s->snoop_index, s->snoop_dummies,
                               (uint8_t) data & 0xff);
 
@@ -823,7 +829,7 @@ static bool aspeed_smc_do_snoop(AspeedSMCFlash *fl,  uint64_t data,
 
     } else if (s->snoop_index == SNOOP_START) {
         uint8_t cmd = data & 0xff;
-        int ndummies = aspeed_smc_num_dummies(cmd);
+        int ndummies = aspeed_smc_num_dummies(fl, cmd);
 
         /*
          * No dummy cycles are expected with the current command. Turn
@@ -836,7 +842,7 @@ static bool aspeed_smc_do_snoop(AspeedSMCFlash *fl,  uint64_t data,
 
         s->snoop_dummies = ndummies * 8;
 
-    } else if (s->snoop_index >= addr_width + 1) {
+    } else if (s->snoop_index >= s->snoop_addr_width + 1) {
 
         /* The SPI transfer has reached the dummy cycles sequence */
         for (; s->snoop_dummies; s->snoop_dummies--) {
@@ -1407,10 +1413,11 @@ static void aspeed_smc_realize(DeviceState *dev, Error **errp)
 
 static const VMStateDescription vmstate_aspeed_smc = {
     .name = "aspeed.smc",
-    .version_id = 2,
-    .minimum_version_id = 2,
+    .version_id = 3,
+    .minimum_version_id = 3,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32_ARRAY(regs, AspeedSMCState, ASPEED_SMC_R_MAX),
+        VMSTATE_UINT8(snoop_addr_width, AspeedSMCState),
         VMSTATE_UINT8(snoop_index, AspeedSMCState),
         VMSTATE_UINT8(snoop_dummies, AspeedSMCState),
         VMSTATE_END_OF_LIST()
