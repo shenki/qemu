@@ -213,6 +213,8 @@ static void aspeed_soc_ast2600_init(Object *obj)
 
     object_initialize_child(obj, "emmc-controller.sdhci", &s->emmc.slots[0],
                             TYPE_SYSBUS_SDHCI);
+
+    object_initialize_child(obj, "ibt", &s->ibt, TYPE_ASPEED_IBT);
 }
 
 /*
@@ -486,6 +488,14 @@ static void aspeed_soc_ast2600_realize(DeviceState *dev, Error **errp)
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->emmc), 0, sc->memmap[ASPEED_DEV_EMMC]);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->emmc), 0,
                        aspeed_soc_get_irq(s, ASPEED_DEV_EMMC));
+
+    /* iBT */
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->ibt), errp)) {
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->ibt), 0, sc->memmap[ASPEED_DEV_IBT]);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->ibt), 0,
+                       aspeed_soc_get_irq(s, ASPEED_DEV_LPC));
 }
 
 static void aspeed_soc_ast2600_class_init(ObjectClass *oc, void *data)
