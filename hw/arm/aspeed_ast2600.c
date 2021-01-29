@@ -217,6 +217,8 @@ static void aspeed_soc_ast2600_init(Object *obj)
     object_initialize_child(obj, "pwm", &s->pwm, TYPE_ASPEED_PWM);
 
     object_initialize_child(obj, "lpc", &s->lpc, TYPE_ASPEED_LPC);
+
+    object_initialize_child(obj, "ibt", &s->ibt, TYPE_ASPEED_IBT);
 }
 
 /*
@@ -512,6 +514,16 @@ static void aspeed_soc_ast2600_realize(DeviceState *dev, Error **errp)
     }
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->lpc), 0, sc->memmap[ASPEED_DEV_LPC]);
     /* LPC IRQ in use by the iBT sub controller */
+
+    /* iBT */
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->ibt), errp)) {
+        return;
+    }
+    memory_region_add_subregion(&s->lpc.iomem,
+                    sc->memmap[ASPEED_DEV_IBT] - sc->memmap[ASPEED_DEV_LPC],
+                    &s->ibt.iomem);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->ibt), 0,
+                       aspeed_soc_get_irq(s, ASPEED_DEV_LPC));
 }
 
 static void aspeed_soc_ast2600_class_init(ObjectClass *oc, void *data)
