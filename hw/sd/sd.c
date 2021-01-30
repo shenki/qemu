@@ -2001,11 +2001,9 @@ static uint32_t sd_bootpart_offset(SDState *sd)
 {
     unsigned int access = sd->ext_csd[EXT_CSD_PART_CONFIG] &
         EXT_CSD_PART_CONFIG_ACC_MASK;
-    unsigned int enable = sd->ext_csd[EXT_CSD_PART_CONFIG] &
-        EXT_CSD_PART_CONFIG_EN_MASK;
     unsigned int boot_capacity = sd->ext_csd[EXT_CSD_BOOT_MULT] << 17;
 
-    if (!sd->emmc || !enable)
+    if (!sd->emmc)
         return 0;
 
     switch (access) {
