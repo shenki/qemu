@@ -437,7 +437,7 @@ static void aspeed_machine_init(MachineState *machine)
         sdhci_attach_drive(&bmc->soc.emmc.slots[0], sd0, true);
 
         if (!drive0 && sd0) {
-            install_boot_rom(sd0, 1 * MiB);
+            install_boot_rom(sd0, 64 * KiB);
         }
     }
 
