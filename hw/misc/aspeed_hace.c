@@ -57,6 +57,14 @@
 /* Other cmd bits */
 #define  HASH_IRQ_EN                    BIT(9)
 #define  HASH_SG_EN                     BIT(18)
+/* Scatter-gather data list */
+#define SG_LIST_LEN_SIZE                4
+#define SG_LIST_LEN_MASK                0x0FFFFFFF
+#define SG_LIST_LEN_LAST                BIT(31)
+#define SG_LIST_ADDR_SIZE               4
+#define SG_LIST_ADDR_MASK               0x7FFFFFFF
+#define SG_LIST_ENTRY_SIZE              (SG_LIST_LEN_SIZE + SG_LIST_ADDR_SIZE)
+#define ASPEED_HACE_MAX_SG              256        /* max number of entries */
 
 static const struct {
     uint32_t mask;
@@ -86,51 +94,74 @@ static int hash_algo_lookup(uint32_t reg)
     return -1;
 }
 
-static int do_hash_operation(AspeedHACEState *s, int algo)
+static void do_hash_operation(AspeedHACEState *s, int algo, bool sg_mode)
 {
-    hwaddr src, len, dest;
-    uint8_t *digest_buf = NULL;
+    struct iovec iov[ASPEED_HACE_MAX_SG];
+    g_autofree uint8_t *digest_buf;
     size_t digest_len = 0;
-    char *src_buf;
-    int rc;
+    int i;
 
-    src = s->regs[R_HASH_SRC];
-    len = s->regs[R_HASH_SRC_LEN];
-    dest = s->regs[R_HASH_DEST];
+    if (sg_mode) {
+        uint32_t len = 0;
 
-    src_buf = address_space_map(&s->dram_as, src, &len, false,
-                                MEMTXATTRS_UNSPECIFIED);
-    if (!src_buf) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: failed to map dram\n", __func__);
-        return -EACCES;
+        for (i = 0; !(len & SG_LIST_LEN_LAST); i++) {
+            uint32_t addr, src;
+
+            if (i == ASPEED_HACE_MAX_SG) {
+                qemu_log_mask(LOG_GUEST_ERROR,
+                        "aspeed_hace: guest failed to set end of sg list marker\n");
+                break;
+            }
+
+            src = s->regs[R_HASH_SRC] + (i * SG_LIST_ENTRY_SIZE);
+
+            len = address_space_ldl_le(&s->dram_as, src,
+                                       MEMTXATTRS_UNSPECIFIED, NULL);
+
+            addr = address_space_ldl_le(&s->dram_as, src + SG_LIST_LEN_SIZE,
+                                        MEMTXATTRS_UNSPECIFIED, NULL);
+            addr &= SG_LIST_ADDR_MASK;
+
+            iov[i].iov_len = len & SG_LIST_LEN_MASK;
+            iov[i].iov_base = address_space_map(&s->dram_as,
+                                                addr,
+                                                &iov[i].iov_len, false,
+                                                MEMTXATTRS_UNSPECIFIED);
+        }
+    } else {
+        hwaddr len = s->regs[R_HASH_SRC_LEN];
+
+        iov[0].iov_len = len;
+        iov[0].iov_base = address_space_map(&s->dram_as, s->regs[R_HASH_SRC],
+                                            &len, false,
+                                            MEMTXATTRS_UNSPECIFIED);
+        i = 1;
     }
 
-    rc = qcrypto_hash_bytes(algo, src_buf, len, &digest_buf, &digest_len,
-                            &error_fatal);
-    if (rc < 0) {
+    if (qcrypto_hash_bytesv(algo, iov, i, &digest_buf, &digest_len, NULL) < 0) {
         qemu_log_mask(LOG_GUEST_ERROR, "%s: qcrypto failed\n", __func__);
-        return rc;
+        return;
     }
 
-    rc = address_space_write(&s->dram_as, dest, MEMTXATTRS_UNSPECIFIED,
-                             digest_buf, digest_len);
-    if (rc) {
+    if (address_space_write(&s->dram_as, s->regs[R_HASH_DEST],
+                            MEMTXATTRS_UNSPECIFIED,
+                            digest_buf, digest_len)) {
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: address space write failed\n", __func__);
+                      "aspeed_hace: address space write failed\n");
     }
-    g_free(digest_buf);
 
-    address_space_unmap(&s->dram_as, src_buf, len, false, len);
+    for (; i > 0; i--) {
+        address_space_unmap(&s->dram_as, iov[i - 1].iov_base,
+                            iov[i - 1].iov_len, false,
+                            iov[i - 1].iov_len);
+    }
 
     /*
      * Set status bits to indicate completion. Testing shows hardware sets
      * these irrespective of HASH_IRQ_EN.
      */
     s->regs[R_STATUS] |= HASH_IRQ;
-
-    return 0;
 }
-
 
 static uint64_t aspeed_hace_read(void *opaque, hwaddr addr, unsigned int size)
 {
@@ -191,11 +222,6 @@ static void aspeed_hace_write(void *opaque, hwaddr addr, uint64_t data,
                           "%s: HMAC engine command mode %"PRIx64" not implemented",
                           __func__, (data & HASH_HMAC_MASK) >> 8);
         }
-        if (data & HASH_SG_EN) {
-            qemu_log_mask(LOG_UNIMP,
-                          "%s: Hash scatter gather mode not implemented",
-                          __func__);
-        }
         if (data & BIT(1)) {
             qemu_log_mask(LOG_UNIMP,
                           "%s: Cascaded mode not implemented",
@@ -208,7 +234,7 @@ static void aspeed_hace_write(void *opaque, hwaddr addr, uint64_t data,
                         __func__, data & ahc->hash_mask);
                 break;
         }
-        do_hash_operation(s, algo);
+        do_hash_operation(s, algo, data & HASH_SG_EN);
 
         if (data & HASH_IRQ_EN) {
             qemu_irq_raise(s->irq);
