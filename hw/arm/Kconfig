@@ -367,6 +367,13 @@ config XLNX_VERSAL
     select XLNX_ZDMA
     select XLNX_ZYNQMP
 
+config WPCM450
+    bool
+    select AT24C  # EEPROM
+    select SERIAL
+    select SSI
+    select UNIMP
+
 config NPCM7XX
     bool
     select A9MPCORE
