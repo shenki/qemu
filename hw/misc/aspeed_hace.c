@@ -71,12 +71,14 @@ static const struct {
     { HASH_ALGO_SHA512_SERIES | HASH_ALGO_SHA512_SHA256, QCRYPTO_HASH_ALG_SHA256 },
 };
 
-static int hash_algo_lookup(uint32_t mask)
+static int hash_algo_lookup(uint32_t reg)
 {
     int i;
 
+    reg &= HASH_ALGO_MASK | SHA512_HASH_ALGO_MASK;
+
     for (i = 0; i < ARRAY_SIZE(hash_algo_map); i++) {
-        if (mask == hash_algo_map[i].mask) {
+        if (reg == hash_algo_map[i].mask) {
             return hash_algo_map[i].algo;
         }
     }
@@ -181,7 +183,9 @@ static void aspeed_hace_write(void *opaque, hwaddr addr, uint64_t data,
         data &= 0x0FFFFFFF;
         break;
     case R_HASH_CMD: {
-        int algo = -1;
+        int algo;
+        data &= ahc->hash_mask;
+
         if ((data & HASH_HMAC_MASK)) {
             qemu_log_mask(LOG_UNIMP,
                           "%s: HMAC engine command mode %"PRIx64" not implemented",
@@ -197,7 +201,7 @@ static void aspeed_hace_write(void *opaque, hwaddr addr, uint64_t data,
                           "%s: Cascaded mode not implemented",
                           __func__);
         }
-        algo = hash_algo_lookup(data & ahc->hash_mask);
+        algo = hash_algo_lookup(data);
         if (algo < 0) {
                 qemu_log_mask(LOG_GUEST_ERROR,
                         "%s: Invalid hash algorithm selection 0x%"PRIx64"\n",
@@ -303,7 +307,7 @@ static void aspeed_ast2400_hace_class_init(ObjectClass *klass, void *data)
 
     ahc->src_mask = 0x0FFFFFFF;
     ahc->dest_mask = 0x0FFFFFF8;
-    ahc->hash_mask = HASH_ALGO_MASK;
+    ahc->hash_mask = 0x000003ff; /* No SG or SHA512 modes */
 }
 
 static const TypeInfo aspeed_ast2400_hace_info = {
@@ -321,7 +325,7 @@ static void aspeed_ast2500_hace_class_init(ObjectClass *klass, void *data)
 
     ahc->src_mask = 0x3fffffff;
     ahc->dest_mask = 0x3ffffff8;
-    ahc->hash_mask = HASH_ALGO_MASK;
+    ahc->hash_mask = 0x000003ff; /* No SG or SHA512 modes */
 }
 
 static const TypeInfo aspeed_ast2500_hace_info = {
@@ -339,7 +343,7 @@ static void aspeed_ast2600_hace_class_init(ObjectClass *klass, void *data)
 
     ahc->src_mask = 0x7FFFFFFF;
     ahc->dest_mask = 0x7FFFFFF8;
-    ahc->hash_mask = HASH_ALGO_MASK | SHA512_HASH_ALGO_MASK;
+    ahc->hash_mask = 0x00147FFF;
 }
 
 static const TypeInfo aspeed_ast2600_hace_info = {
