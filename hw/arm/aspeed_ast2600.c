@@ -244,6 +244,10 @@ static void aspeed_soc_ast2600_init(Object *obj)
         object_initialize_child(obj, "uart[*]", &s->uart[i], TYPE_SERIAL_MM);
     }
 
+    for (i = 0; i < sc->vuarts_num; i++) {
+        object_initialize_child(obj, "vuart[*]", &s->vuart[i], TYPE_SERIAL_MM);
+    }
+
     snprintf(typename, sizeof(typename), TYPE_ASPEED_XDMA "-%s", socname);
     object_initialize_child(obj, "xdma", &s->xdma, typename);
 
@@ -448,6 +452,11 @@ static void aspeed_soc_ast2600_realize(DeviceState *dev, Error **errp)
 
     /* UART */
     if (!aspeed_soc_uart_realize(s, errp)) {
+        return;
+    }
+
+    /* VUART */
+    if (!aspeed_soc_vuart_realize(s, errp)) {
         return;
     }
 
@@ -748,6 +757,7 @@ static void aspeed_soc_ast2600_class_init(ObjectClass *oc, void *data)
     sc->wdts_num     = 4;
     sc->macs_num     = 4;
     sc->uarts_num    = 13;
+    sc->vuarts_num   = 4;
     sc->irqmap       = aspeed_soc_ast2600_irqmap;
     sc->memmap       = aspeed_soc_ast2600_memmap;
     sc->num_cpus     = 2;

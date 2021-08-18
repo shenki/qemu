@@ -49,6 +49,7 @@
 #define ASPEED_CPUS_NUM  2
 #define ASPEED_MACS_NUM  4
 #define ASPEED_UARTS_NUM 13
+#define ASPEED_VUARTS_NUM 4
 #define ASPEED_JTAG_NUM  2
 
 struct AspeedSoCState {
@@ -95,6 +96,7 @@ struct AspeedSoCState {
     AspeedPECIState peci;
     AspeedGFXState gfx;
     SerialMM uart[ASPEED_UARTS_NUM];
+    SerialMM vuart[ASPEED_VUARTS_NUM];
     Clock *sysclk;
     UnimplementedDeviceState iomem;
     UnimplementedDeviceState video;
@@ -124,6 +126,7 @@ struct AspeedSoCClass {
     int wdts_num;
     int macs_num;
     int uarts_num;
+    int vuarts_num;
     const int *irqmap;
     const hwaddr *memmap;
     uint32_t num_cpus;
@@ -219,6 +222,7 @@ enum {
 
 qemu_irq aspeed_soc_get_irq(AspeedSoCState *s, int dev);
 bool aspeed_soc_uart_realize(AspeedSoCState *s, Error **errp);
+bool aspeed_soc_vuart_realize(AspeedSoCState *s, Error **errp);
 void aspeed_soc_uart_set_chr(AspeedSoCState *s, int dev, Chardev *chr);
 bool aspeed_soc_dram_init(AspeedSoCState *s, Error **errp);
 void aspeed_mmio_map(AspeedSoCState *s, SysBusDevice *dev, int n, hwaddr addr);
