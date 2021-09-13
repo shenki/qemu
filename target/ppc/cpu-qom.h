@@ -118,6 +118,8 @@ enum powerpc_excp_t {
     POWERPC_EXCP_POWER9,
     /* POWER10 exception model           */
     POWERPC_EXCP_POWER10,
+    /* POWER9 (Microwatt) exception model  */
+    POWERPC_EXCP_POWER9MW,
 };
 
 /*****************************************************************************/

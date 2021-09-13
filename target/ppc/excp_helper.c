@@ -457,6 +457,7 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp_model, int excp)
         if (excp_model == POWERPC_EXCP_POWER7 ||
             excp_model == POWERPC_EXCP_POWER8 ||
             excp_model == POWERPC_EXCP_POWER9 ||
+            excp_model == POWERPC_EXCP_POWER9MW ||
             excp_model == POWERPC_EXCP_POWER10) {
             lpes0 = !!(env->spr[SPR_LPCR] & LPCR_LPES0);
         } else
@@ -865,6 +866,8 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp_model, int excp)
         } else if (env->spr[SPR_LPCR] & LPCR_ILE) {
             new_msr |= (target_ulong)1 << MSR_LE;
         }
+    } else if (excp_model == POWERPC_EXCP_POWER9MW) {
+        new_msr |= (target_ulong)1 << MSR_LE;
     } else if (msr_ile) {
         new_msr |= (target_ulong)1 << MSR_LE;
     }
