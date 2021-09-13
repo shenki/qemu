@@ -103,6 +103,11 @@ static void ppc_radix64_raise_si(PowerPCCPU *cpu, MMUAccessType access_type,
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
 
+    qemu_log_mask(CPU_LOG_MMU, "%s for %s @0x%"VADDR_PRIx" cause %u\n", __func__,
+                  access_type == MMU_DATA_LOAD ? "reading" :
+                  (access_type == MMU_DATA_STORE ? "writing" : "execute"),
+                  eaddr, cause);
+
     switch (access_type) {
     case MMU_INST_FETCH:
         /* Instruction Storage Interrupt */
@@ -129,6 +134,11 @@ static void ppc_radix64_raise_hsi(PowerPCCPU *cpu, MMUAccessType access_type,
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
+
+    qemu_log_mask(CPU_LOG_MMU, "%s for %s @0x%"VADDR_PRIx" 0x%"HWADDR_PRIx" cause %u\n", __func__,
+                  access_type == MMU_DATA_LOAD ? "reading" :
+                  (access_type == MMU_DATA_STORE ? "writing" : "execute"),
+                  eaddr, g_raddr, cause);
 
     switch (access_type) {
     case MMU_INST_FETCH:
@@ -306,6 +316,17 @@ static int ppc_radix64_partition_scoped_xlate(PowerPCCPU *cpu,
     hwaddr pte_addr;
     uint64_t pte;
 
+    qemu_log_mask(CPU_LOG_MMU, "%s for %s @0x%"VADDR_PRIx
+                  " mmu_idx %u (prot %c%c%c) 0x%"HWADDR_PRIx"\n",
+                  __func__,
+                  access_type == MMU_DATA_LOAD ? "reading" :
+                  (access_type == MMU_DATA_STORE ? "writing" : "execute"),
+                  eaddr, mmu_idx,
+                  *h_prot & PAGE_READ ? 'r' : '-',
+                  *h_prot & PAGE_WRITE ? 'w' : '-',
+                  *h_prot & PAGE_EXEC ? 'x' : '-',
+                  g_raddr);
+
     *h_page_size = PRTBE_R_GET_RTS(pate.dw0);
     /* No valid pte or access denied due to protection */
     if (ppc_radix64_walk_tree(CPU(cpu)->as, g_raddr, pate.dw0 & PRTBE_R_RPDB,
@@ -342,6 +363,13 @@ static int ppc_radix64_process_scoped_xlate(PowerPCCPU *cpu,
     int fault_cause = 0, h_page_size, h_prot;
     hwaddr h_raddr, pte_addr;
     int ret;
+
+    qemu_log_mask(CPU_LOG_MMU, "%s for %s @0x%"VADDR_PRIx
+                  " mmu_idx %u pid %ld\n",
+                  __func__,
+                  access_type == MMU_DATA_LOAD ? "reading" :
+                  (access_type == MMU_DATA_STORE ? "writing" : "execute"),
+                  eaddr, mmu_idx, pid);
 
     /* Index Process Table by PID to Find Corresponding Process Table Entry */
     offset = pid * sizeof(struct prtb_entry);
@@ -468,7 +496,7 @@ static int ppc_radix64_process_scoped_xlate(PowerPCCPU *cpu,
  *              | = On        | Process Scoped |    Scoped     |
  *              +-------------+----------------+---------------+
  */
-bool ppc_radix64_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
+static bool __ppc_radix64_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
                        hwaddr *raddr, int *psizep, int *protp, int mmu_idx,
                        bool guest_visible)
 {
@@ -587,4 +615,25 @@ bool ppc_radix64_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
     }
 
     return true;
+}
+
+bool ppc_radix64_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
+                       hwaddr *raddrp, int *psizep, int *protp, int mmu_idx,
+                       bool guest_visible)
+{
+    bool ret = __ppc_radix64_xlate(cpu, eaddr, access_type, raddrp,
+                                   psizep, protp, mmu_idx, guest_visible);
+
+    qemu_log_mask(CPU_LOG_MMU, "%s for %s @0x%"VADDR_PRIx
+                  " mmu_idx %u (prot %c%c%c) -> 0x%"HWADDR_PRIx"\n",
+                  __func__,
+                  access_type == MMU_DATA_LOAD ? "reading" :
+                  (access_type == MMU_DATA_STORE ? "writing" : "execute"),
+                  eaddr, mmu_idx,
+                  *protp & PAGE_READ ? 'r' : '-',
+                  *protp & PAGE_WRITE ? 'w' : '-',
+                  *protp & PAGE_EXEC ? 'x' : '-',
+                  *raddrp);
+
+    return ret;
 }

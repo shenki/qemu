@@ -28,12 +28,12 @@
 #include "exec/cpu_ldst.h"
 #endif
 
-/* #define DEBUG_OP */
+#define DEBUG_OP
 /* #define DEBUG_SOFTWARE_TLB */
-/* #define DEBUG_EXCEPTIONS */
+#define DEBUG_EXCEPTIONS
 
 #ifdef DEBUG_EXCEPTIONS
-#  define LOG_EXCP(...) qemu_log(__VA_ARGS__)
+#  define LOG_EXCP(...) qemu_log_mask(CPU_LOG_INT, ## __VA_ARGS__)
 #else
 #  define LOG_EXCP(...) do { } while (0)
 #endif
@@ -1133,7 +1133,7 @@ bool ppc_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
 #if defined(DEBUG_OP)
 static void cpu_dump_rfi(target_ulong RA, target_ulong msr)
 {
-    qemu_log("Return from exception at " TARGET_FMT_lx " with flags "
+    qemu_log_mask(CPU_LOG_INT, "Return from exception at " TARGET_FMT_lx " with flags "
              TARGET_FMT_lx "\n", RA, msr);
 }
 #endif
