@@ -121,3 +121,9 @@ ppc440_pcix_update_pim(int idx, uint64_t size, uint64_t la) "Added window %d of 
 ppc440_pcix_update_pom(int idx, uint32_t size, uint64_t la, uint64_t pcia) "Added window %d of size=0x%x from CPU=0x%" PRIx64 " to PCI=0x%" PRIx64
 ppc440_pcix_reg_read(uint64_t addr, uint32_t val) "addr 0x%" PRIx64 " = 0x%" PRIx32
 ppc440_pcix_reg_write(uint64_t addr, uint32_t val, uint32_t size) "addr 0x%" PRIx64 " = 0x%" PRIx32 " size 0x%" PRIx32
+
+# microwatt
+mw_syscon_read(uint64_t addr, uint64_t data)  "@0x%" PRIx64 " value=%"PRIx64
+mw_syscon_write(uint64_t addr, uint64_t data) "@0x%" PRIx64 " value=%"PRIx64
+mw_ics_read(uint64_t addr, uint64_t data)  "@0x%" PRIx64 " value=%"PRIx64
+mw_ics_write(uint64_t addr, uint64_t data) "@0x%" PRIx64 " value=%"PRIx64

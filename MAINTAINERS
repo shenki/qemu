@@ -1394,6 +1394,15 @@ F: include/hw/ppc/vof*
 F: pc-bios/vof/*
 F: pc-bios/vof*
 
+MicroWatt
+M: Cédric Le Goater <clg@kaod.org>
+L: qemu-ppc@nongnu.org
+S: Maintained
+F: hw/ppc/microwatt*
+F: hw/ppc/mw*
+F: include/hw/ppc/mw*
+F: include/hw/ppc/microwatt*
+
 RISC-V Machines
 ---------------
 OpenTitan

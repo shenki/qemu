@@ -15,6 +15,12 @@ config PSERIES
     select CHRP_NVRAM
     select VOF
 
+config MICROWATT
+    bool
+    select UNIMP
+    select XICS
+    select LITEETH
+
 config SPAPR_RNG
     bool
     default y
