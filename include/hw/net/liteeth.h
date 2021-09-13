@@ -17,8 +17,7 @@ struct LiteEthState {
 
     MemoryRegion mmio;
     MemoryRegion buf;
-    qemu_irq rx_irq;
-    qemu_irq tx_irq;
+    qemu_irq irq;
     NICState *nic;
     NICConf conf;
 

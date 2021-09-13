@@ -67,7 +67,7 @@ static ssize_t liteeth_xmit(LiteEthState *s)
 
     if (s->regs[LITEETH_READER_EV_ENABLE]) {
         s->regs[LITEETH_READER_EV_PENDING] = 1;
-        qemu_set_irq(s->rx_irq, 1);
+        qemu_set_irq(s->irq, 1);
     }
 
     return 0;
@@ -93,13 +93,12 @@ static ssize_t liteeth_receive(NetClientState *nc, const uint8_t *buf, size_t le
     dma_memory_write(&address_space_memory, buf_addr, buf, len);
 
     /* Update registers */
-    s->regs[LITEETH_READER_SLOT] = s->rx_slot;
-    s->regs[LITEETH_READER_READY] = 1;
-    s->regs[LITEETH_READER_LENGTH] = len;
+    s->regs[LITEETH_WRITER_SLOT] = s->rx_slot;
+    s->regs[LITEETH_WRITER_EV_PENDING] = 1;
+    s->regs[LITEETH_WRITER_LENGTH] = len;
 
-    if (s->regs[LITEETH_READER_EV_ENABLE]) {
-        s->regs[LITEETH_READER_EV_PENDING] = 1;
-        qemu_set_irq(s->rx_irq, 1);
+    if (s->regs[LITEETH_WRITER_EV_ENABLE]) {
+        qemu_set_irq(s->irq, 1);
     }
 
     s->rx_slot = (s->rx_slot + 1) % s->rx_slots;
@@ -115,8 +114,7 @@ static void liteeth_reset(DeviceState *dev)
     s->tx_slot = 0;
     s->rx_slot = 0;
 
-    qemu_set_irq(s->tx_irq, 0);
-    qemu_set_irq(s->rx_irq, 0);
+    qemu_set_irq(s->irq, 0);
 }
 
 static uint64_t liteeth_read(void *opaque, hwaddr addr, unsigned width)
@@ -151,11 +149,7 @@ static void liteeth_write(void *opaque, hwaddr addr, uint64_t val,
     case LITEETH_READER_START:
         liteeth_xmit(s);
         break;
-    case LITEETH_READER_EV_PENDING:
-        qemu_set_irq(s->rx_irq, 0);
-        break;
-    case LITEETH_WRITER_EV_PENDING:
-        qemu_set_irq(s->tx_irq, 0);
+    default:
         break;
     }
 }
@@ -184,8 +178,7 @@ static void liteeth_realize(DeviceState *dev, Error **errp)
     SysBusDevice *sbd = SYS_BUS_DEVICE(dev);
     uint64_t buf_size = (s->tx_slots + s->rx_slots) * s->slot_size;
 
-    sysbus_init_irq(sbd, &s->tx_irq);
-    sysbus_init_irq(sbd, &s->rx_irq);
+    sysbus_init_irq(sbd, &s->irq);
 
     /* MAC registers */
     memory_region_init_io(&s->mmio, OBJECT(s), &liteeth_ops, s,
