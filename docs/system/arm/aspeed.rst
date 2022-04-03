@@ -114,6 +114,8 @@ Options specific to Aspeed machines are :
 
  * ``spi-model`` to change the SPI Flash model.
 
+ * ``boot-emmc`` to set or unset boot from eMMC (AST2600 only).
+
 For instance, to start the ``ast2500-evb`` machine with a different
 FMC chip and a bigger (64M) SPI chip, use :
 
