@@ -313,7 +313,8 @@ static void aspeed_board_init_flashes(AspeedSMCState *s, const char *flashtype,
     }
 }
 
-static void sdhci_attach_drive(SDHCIState *sdhci, DriveInfo *dinfo, bool emmc)
+static void sdhci_attach_drive(SDHCIState *sdhci, DriveInfo *dinfo, bool emmc,
+                               uint8_t boot_config)
 {
         DeviceState *card;
 
@@ -323,6 +324,9 @@ static void sdhci_attach_drive(SDHCIState *sdhci, DriveInfo *dinfo, bool emmc)
         card = qdev_new(emmc ? TYPE_EMMC : TYPE_SD_CARD);
         qdev_prop_set_drive_err(card, "drive", blk_by_legacy_dinfo(dinfo),
                                 &error_fatal);
+        if (boot_config) {
+            qdev_prop_set_uint8(card, "boot-config", boot_config);
+        }
         qdev_realize_and_unref(card,
                                qdev_get_child_bus(DEVICE(sdhci), "sd-bus"),
                                &error_fatal);
@@ -337,6 +341,7 @@ static void aspeed_machine_init(MachineState *machine)
     ram_addr_t max_ram_size;
     int i;
     NICInfo *nd = &nd_table[0];
+    bool boot_emmc;
 
     memory_region_init(&bmc->ram_container, NULL, "aspeed-ram-container",
                        4 * GiB);
@@ -396,8 +401,11 @@ static void aspeed_machine_init(MachineState *machine)
                               bmc->spi_model ? bmc->spi_model : amc->spi_model,
                               1, amc->num_cs);
 
+    boot_emmc = sc->boot_emmc &&
+        !!(amc->hw_strap1 & AST26500_HW_STRAP_BOOT_SRC_EMMC);
+
     /* Install first FMC flash content as a boot rom. */
-    if (drive0) {
+    if (!boot_emmc && drive0) {
         AspeedSMCFlash *fl = &bmc->soc.fmc.flashes[0];
         MemoryRegion *boot_rom = g_new(MemoryRegion, 1);
         uint64_t size = memory_region_size(&fl->mmio);
@@ -444,14 +452,15 @@ static void aspeed_machine_init(MachineState *machine)
 
     for (i = 0; i < bmc->soc.sdhci.num_slots; i++) {
         sdhci_attach_drive(&bmc->soc.sdhci.slots[i],
-                           drive_get(IF_SD, 0, i), false);
+                           drive_get(IF_SD, 0, i), false, 0);
     }
 
     if (bmc->soc.emmc.num_slots) {
         DriveInfo *sd0 = drive_get(IF_SD, 0, bmc->soc.sdhci.num_slots);
 
-        sdhci_attach_drive(&bmc->soc.emmc.slots[0], sd0, true);
-        if (sd0 && !drive0) {
+        sdhci_attach_drive(&bmc->soc.emmc.slots[0], sd0, true,
+                           boot_emmc ? 0x48 : 0x0);
+        if (sd0 && boot_emmc) {
             install_boot_rom(sd0, 64 * KiB);
         }
     }

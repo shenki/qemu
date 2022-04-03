@@ -100,6 +100,7 @@ struct AspeedSoCClass {
     const int *irqmap;
     const hwaddr *memmap;
     uint32_t num_cpus;
+    bool boot_emmc;
 };
 
 
