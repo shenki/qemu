@@ -230,6 +230,8 @@ static void aspeed_soc_ast2600_init(Object *obj)
     object_initialize_child(obj, "i3c", &s->i3c, TYPE_ASPEED_I3C);
 
     object_initialize_child(obj, "sbc", &s->sbc, TYPE_ASPEED_SBC);
+
+    object_initialize_child(obj, "pwm", &s->pwm, TYPE_ASPEED_PWM);
 }
 
 /*
@@ -552,6 +554,14 @@ static void aspeed_soc_ast2600_realize(DeviceState *dev, Error **errp)
         return;
     }
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->sbc), 0, sc->memmap[ASPEED_DEV_SBC]);
+
+    /* PWM */
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->pwm), errp)) {
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->pwm), 0, sc->memmap[ASPEED_DEV_PWM]);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->pwm), 0,
+                       aspeed_soc_get_irq(s, ASPEED_DEV_PWM));
 }
 
 static void aspeed_soc_ast2600_class_init(ObjectClass *oc, void *data)
