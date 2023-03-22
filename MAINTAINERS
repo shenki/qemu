@@ -1098,6 +1098,8 @@ F: hw/net/ftgmac100.c
 F: include/hw/net/ftgmac100.h
 F: docs/system/arm/aspeed.rst
 F: tests/qtest/*aspeed*
+F: include/hw/misc/latching_switch.h
+F: hw/misc/latching_switch.c
 F: hw/arm/fby35.c
 
 NRF51
