@@ -834,6 +834,13 @@ static const TypeInfo aspeed_1030_scu_info = {
     .class_init = aspeed_1030_scu_class_init,
 };
 
+static const TypeInfo aspeed_2700_scu_info = {
+    .name = TYPE_ASPEED_2700_SCU,
+    .parent = TYPE_ASPEED_SCU,
+    .instance_size = sizeof(AspeedSCUState),
+    .class_init = aspeed_2600_scu_class_init,
+};
+
 static void aspeed_scu_register_types(void)
 {
     type_register_static(&aspeed_scu_info);
@@ -841,6 +848,7 @@ static void aspeed_scu_register_types(void)
     type_register_static(&aspeed_2500_scu_info);
     type_register_static(&aspeed_2600_scu_info);
     type_register_static(&aspeed_1030_scu_info);
+    type_register_static(&aspeed_2700_scu_info);
 }
 
 type_init(aspeed_scu_register_types);

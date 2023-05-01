@@ -1854,6 +1854,24 @@ static const TypeInfo aspeed_1030_spi2_info = {
     .class_init = aspeed_1030_spi2_class_init,
 };
 
+static const TypeInfo aspeed_2700_fmc_info = {
+    .name =  "aspeed.fmc-ast2700",
+    .parent = TYPE_ASPEED_SMC,
+    .class_init = aspeed_2600_fmc_class_init,
+};
+
+static const TypeInfo aspeed_2700_spi1_info = {
+    .name =  "aspeed.spi1-ast2700",
+    .parent = TYPE_ASPEED_SMC,
+    .class_init = aspeed_2600_spi1_class_init,
+};
+
+static const TypeInfo aspeed_2700_spi2_info = {
+    .name =  "aspeed.spi2-ast2700",
+    .parent = TYPE_ASPEED_SMC,
+    .class_init = aspeed_2600_spi2_class_init,
+};
+
 static void aspeed_smc_register_types(void)
 {
     type_register_static(&aspeed_smc_flash_info);
@@ -1867,6 +1885,9 @@ static void aspeed_smc_register_types(void)
     type_register_static(&aspeed_2600_fmc_info);
     type_register_static(&aspeed_2600_spi1_info);
     type_register_static(&aspeed_2600_spi2_info);
+    type_register_static(&aspeed_2700_fmc_info);
+    type_register_static(&aspeed_2700_spi1_info);
+    type_register_static(&aspeed_2700_spi2_info);
     type_register_static(&aspeed_1030_fmc_info);
     type_register_static(&aspeed_1030_spi1_info);
     type_register_static(&aspeed_1030_spi2_info);

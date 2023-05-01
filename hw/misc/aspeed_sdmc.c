@@ -512,12 +512,19 @@ static const TypeInfo aspeed_2600_sdmc_info = {
     .class_init = aspeed_2600_sdmc_class_init,
 };
 
+static const TypeInfo aspeed_2700_sdmc_info = {
+    .name = TYPE_ASPEED_2700_SDMC,
+    .parent = TYPE_ASPEED_SDMC,
+    .class_init = aspeed_2600_sdmc_class_init,
+};
+
 static void aspeed_sdmc_register_types(void)
 {
     type_register_static(&aspeed_sdmc_info);
     type_register_static(&aspeed_2400_sdmc_info);
     type_register_static(&aspeed_2500_sdmc_info);
     type_register_static(&aspeed_2600_sdmc_info);
+    type_register_static(&aspeed_2700_sdmc_info);
 }
 
 type_init(aspeed_sdmc_register_types);

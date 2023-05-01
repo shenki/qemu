@@ -423,6 +423,13 @@ static const TypeInfo aspeed_1030_wdt_info = {
     .class_init = aspeed_1030_wdt_class_init,
 };
 
+static const TypeInfo aspeed_2700_wdt_info = {
+    .name = TYPE_ASPEED_2700_WDT,
+    .parent = TYPE_ASPEED_WDT,
+    .instance_size = sizeof(AspeedWDTState),
+    .class_init = aspeed_2600_wdt_class_init,
+};
+
 static void wdt_aspeed_register_types(void)
 {
     type_register_static(&aspeed_wdt_info);
@@ -430,6 +437,7 @@ static void wdt_aspeed_register_types(void)
     type_register_static(&aspeed_2500_wdt_info);
     type_register_static(&aspeed_2600_wdt_info);
     type_register_static(&aspeed_1030_wdt_info);
+    type_register_static(&aspeed_2700_wdt_info);
 }
 
 type_init(wdt_aspeed_register_types)

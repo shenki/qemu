@@ -1203,6 +1203,20 @@ static const TypeInfo aspeed_gpio_ast1030_info = {
     .instance_init  = aspeed_gpio_init,
 };
 
+static const TypeInfo aspeed_gpio_ast2700_3_3v_info = {
+    .name           = TYPE_ASPEED_GPIO "-ast2700",
+    .parent         = TYPE_ASPEED_GPIO,
+    .class_init     = aspeed_gpio_ast2600_3_3v_class_init,
+    .instance_init  = aspeed_gpio_init,
+};
+
+static const TypeInfo aspeed_gpio_ast2700_1_8v_info = {
+    .name           = TYPE_ASPEED_GPIO "-ast2700-1_8v",
+    .parent         = TYPE_ASPEED_GPIO,
+    .class_init     = aspeed_gpio_ast2600_1_8v_class_init,
+    .instance_init  = aspeed_gpio_init,
+};
+
 static void aspeed_gpio_register_types(void)
 {
     type_register_static(&aspeed_gpio_info);
@@ -1211,6 +1225,8 @@ static void aspeed_gpio_register_types(void)
     type_register_static(&aspeed_gpio_ast2600_3_3v_info);
     type_register_static(&aspeed_gpio_ast2600_1_8v_info);
     type_register_static(&aspeed_gpio_ast1030_info);
+    type_register_static(&aspeed_gpio_ast2700_3_3v_info);
+    type_register_static(&aspeed_gpio_ast2700_1_8v_info);
 }
 
 type_init(aspeed_gpio_register_types);

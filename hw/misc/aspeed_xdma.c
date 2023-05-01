@@ -217,6 +217,12 @@ static const TypeInfo aspeed_2400_xdma_info = {
     .class_init = aspeed_2400_xdma_class_init,
 };
 
+static const TypeInfo aspeed_2700_xdma_info = {
+    .name = TYPE_ASPEED_2700_XDMA,
+    .parent = TYPE_ASPEED_XDMA,
+    .class_init = aspeed_2600_xdma_class_init,
+};
+
 static void aspeed_xdma_class_init(ObjectClass *classp, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(classp);
@@ -241,5 +247,6 @@ static void aspeed_xdma_register_type(void)
     type_register_static(&aspeed_2400_xdma_info);
     type_register_static(&aspeed_2500_xdma_info);
     type_register_static(&aspeed_2600_xdma_info);
+    type_register_static(&aspeed_2700_xdma_info);
 }
 type_init(aspeed_xdma_register_type);
