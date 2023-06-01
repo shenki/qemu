@@ -122,6 +122,7 @@
 #define PSIHB9_FSPBAR_MASK              0x00ffffff00000000ull
 
 #define PSIHB_REG(addr) (((addr) >> 3) + PSIHB_XSCOM_BAR)
+#define PSIHB_MMIO(addr) (((addr) + PSIHB_XSCOM_BAR) >> 3)
 
 static void pnv_psi_set_bar(PnvPsi *psi, uint64_t bar)
 {
@@ -675,10 +676,10 @@ static void pnv_psi_notify(XiveNotifier *xf, uint32_t srcno, bool pq_checked)
 static uint64_t pnv_psi_p9_reg_read(void *opaque, hwaddr addr, unsigned size)
 {
     PnvPsi *psi = PNV_PSI(opaque);
-    uint32_t reg = PSIHB_REG(addr);
+    uint32_t reg = addr;
     uint64_t val = -1;
 
-    switch (addr) {
+    switch (PSIHB_MMIO(addr)) {
     case PSIHB9_CR:
     case PSIHB9_SEMR:
         /* FSP stuff */
@@ -700,10 +701,10 @@ static void pnv_psi_p9_reg_write(void *opaque, hwaddr addr,
 {
     PnvPsi *psi = PNV_PSI(opaque);
     Pnv9Psi *psi9 = PNV9_PSI(psi);
-    uint32_t reg = PSIHB_REG(addr);
+    uint32_t reg = addr;
     MemoryRegion *sysmem = get_system_memory();
 
-    switch (addr) {
+    switch (PSIHB_MMIO(addr)) {
     case PSIHB9_CR:
         if (val & PSIHB10_CR_STORE_EOI) {
             psi9->source.esb_flags |= XIVE_SRC_STORE_EOI;
@@ -755,13 +756,13 @@ static void pnv_psi_p9_reg_write(void *opaque, hwaddr addr,
 
 static uint64_t pnv_psi_p9_mmio_read(void *opaque, hwaddr addr, unsigned size)
 {
-    return pnv_psi_p9_reg_read(opaque, addr, size);
+    return pnv_psi_p9_reg_read(opaque, PSIHB_REG(addr), size);
 }
 
 static void pnv_psi_p9_mmio_write(void *opaque, hwaddr addr,
                                   uint64_t val, unsigned size)
 {
-    pnv_psi_p9_reg_write(opaque, addr, val, size);
+    pnv_psi_p9_reg_write(opaque, PSIHB_REG(addr), val, size);
 }
 
 static const MemoryRegionOps pnv_psi_p9_mmio_ops = {
