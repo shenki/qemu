@@ -781,24 +781,23 @@ static const MemoryRegionOps pnv_psi_p9_mmio_ops = {
 
 static uint64_t pnv_psi_p9_xscom_read(void *opaque, hwaddr addr, unsigned size)
 {
-    /* No read are expected */
-    qemu_log_mask(LOG_GUEST_ERROR, "PSI: xscom read at 0x%" PRIx64 "\n", addr);
-    return -1;
+    /* TODO: Should we shift by 3? Why do we shift by 3? */
+    return pnv_psi_p9_reg_read(opaque, addr >> 3, size);
 }
 
 static void pnv_psi_p9_xscom_write(void *opaque, hwaddr addr,
                                 uint64_t val, unsigned size)
 {
     PnvPsi *psi = PNV_PSI(opaque);
+    addr = addr >> 3;
 
     /* XSCOM is only used to set the PSIHB MMIO region */
-    switch (addr >> 3) {
+    switch (addr) {
     case PSIHB_XSCOM_BAR:
         pnv_psi_set_bar(psi, val);
         break;
     default:
-        qemu_log_mask(LOG_GUEST_ERROR, "PSI: xscom write at 0x%" PRIx64 "\n",
-                      addr);
+        pnv_psi_p9_reg_write(opaque, addr, val, size);
     }
 }
 
