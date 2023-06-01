@@ -672,7 +672,7 @@ static void pnv_psi_notify(XiveNotifier *xf, uint32_t srcno, bool pq_checked)
     }
 }
 
-static uint64_t pnv_psi_p9_mmio_read(void *opaque, hwaddr addr, unsigned size)
+static uint64_t pnv_psi_p9_reg_read(void *opaque, hwaddr addr, unsigned size)
 {
     PnvPsi *psi = PNV_PSI(opaque);
     uint32_t reg = PSIHB_REG(addr);
@@ -695,8 +695,8 @@ static uint64_t pnv_psi_p9_mmio_read(void *opaque, hwaddr addr, unsigned size)
     return val;
 }
 
-static void pnv_psi_p9_mmio_write(void *opaque, hwaddr addr,
-                                  uint64_t val, unsigned size)
+static void pnv_psi_p9_reg_write(void *opaque, hwaddr addr,
+                                 uint64_t val, unsigned size)
 {
     PnvPsi *psi = PNV_PSI(opaque);
     Pnv9Psi *psi9 = PNV9_PSI(psi);
@@ -751,6 +751,17 @@ static void pnv_psi_p9_mmio_write(void *opaque, hwaddr addr,
     default:
         qemu_log_mask(LOG_GUEST_ERROR, "%s: write at 0x%" PRIx64 "\n", __func__, addr);
     }
+}
+
+static uint64_t pnv_psi_p9_mmio_read(void *opaque, hwaddr addr, unsigned size)
+{
+    return pnv_psi_p9_reg_read(opaque, addr, size);
+}
+
+static void pnv_psi_p9_mmio_write(void *opaque, hwaddr addr,
+                                  uint64_t val, unsigned size)
+{
+    pnv_psi_p9_reg_write(opaque, addr, val, size);
 }
 
 static const MemoryRegionOps pnv_psi_p9_mmio_ops = {
