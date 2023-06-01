@@ -689,7 +689,7 @@ static uint64_t pnv_psi_p9_mmio_read(void *opaque, hwaddr addr, unsigned size)
         val = psi->regs[reg];
         break;
     default:
-        qemu_log_mask(LOG_GUEST_ERROR, "PSI: read at 0x%" PRIx64 "\n", addr);
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: read at 0x%" PRIx64 "\n", __func__, addr);
     }
 
     return val;
@@ -749,7 +749,7 @@ static void pnv_psi_p9_mmio_write(void *opaque, hwaddr addr,
         psi->regs[reg] = val;
         break;
     default:
-        qemu_log_mask(LOG_GUEST_ERROR, "PSI: write at 0x%" PRIx64 "\n", addr);
+        qemu_log_mask(LOG_GUEST_ERROR, "%s: write at 0x%" PRIx64 "\n", __func__, addr);
     }
 }
 
