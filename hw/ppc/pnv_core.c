@@ -377,7 +377,7 @@ static uint64_t pnv_quad_power9_xscom_read(void *opaque, hwaddr addr,
         val = 0;
         break;
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: writing @0x%08x\n", __func__,
+        qemu_log_mask(LOG_UNIMP, "%s: unimp read from @0x%08x\n", __func__,
                       offset);
     }
 
@@ -394,7 +394,7 @@ static void pnv_quad_power9_xscom_write(void *opaque, hwaddr addr, uint64_t val,
     case P9X_EX_NCU_SPEC_BAR + 0x400: /* Second EX */
         break;
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: writing @0x%08x\n", __func__,
+        qemu_log_mask(LOG_UNIMP, "%s: unimp write to @0x%08x\n", __func__,
                   offset);
     }
 }
@@ -426,7 +426,7 @@ static uint64_t pnv_quad_power10_xscom_read(void *opaque, hwaddr addr,
         val = 0;
         break;
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: writing @0x%08x\n", __func__,
+        qemu_log_mask(LOG_UNIMP, "%s: unimp read from @0x%08x\n", __func__,
                       offset);
     }
 
@@ -440,7 +440,7 @@ static void pnv_quad_power10_xscom_write(void *opaque, hwaddr addr, uint64_t val
 
     switch (offset) {
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: writing @0x%08x\n", __func__,
+        qemu_log_mask(LOG_UNIMP, "%s: unimp write to @0x%08x\n", __func__,
                   offset);
     }
 }
