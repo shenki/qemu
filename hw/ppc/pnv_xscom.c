@@ -106,6 +106,26 @@ static uint64_t xscom_read_default(PnvChip *chip, uint32_t pcba)
     case 0x401082a:
     case 0x4010828:
         return 0;
+
+    /* P10_QME_SPWU_HYP */
+    case 0x200e883c:
+    case 0x200e483c:
+    case 0x200e283c:
+    case 0x200e183c:
+        return 0;
+
+    /* P10_QME_SSH_HYP */
+    case 0x200e882c:
+    case 0x200e482c:
+    case 0x200e282c:
+    case 0x200e182c:
+        return 0;
+
+    /* XPEC_P10_PCI_CPLT_CONF1 */
+    case 0x08000009:
+    case 0x09000009:
+        return 0;
+
     default:
         return -1;
     }
@@ -152,6 +172,13 @@ static bool xscom_write_default(PnvChip *chip, uint32_t pcba, uint64_t val)
     case PRD_P8_IPOLL_REG_STATUS:
     case PRD_P9_IPOLL_REG_MASK:
     case PRD_P9_IPOLL_REG_STATUS:
+
+    /* P10_QME_SPWU_HYP */
+    case 0x200e883c:
+    case 0x200e483c:
+    case 0x200e283c:
+    case 0x200e183c:
+
         return true;
     default:
         return false;
