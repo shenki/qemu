@@ -496,6 +496,45 @@ static const MemoryRegionOps pnv_quad_power10_xscom_ops = {
     .endianness = DEVICE_BIG_ENDIAN,
 };
 
+static uint64_t pnv_qme_power10_xscom_read(void *opaque, hwaddr addr,
+                                            unsigned int width)
+{
+    uint32_t offset = addr >> 3;
+    uint64_t val = -1;
+
+    switch (offset & ~0xf000) {
+    case 0x83c:
+        return 0;
+    default:
+        qemu_log_mask(LOG_UNIMP, "%s: unimp read 0x%08x\n", __func__,
+                      offset);
+    }
+
+    return val;
+}
+
+static void pnv_qme_power10_xscom_write(void *opaque, hwaddr addr,
+                                         uint64_t val, unsigned int width)
+{
+    uint32_t offset = addr >> 3;
+
+    switch (offset) {
+    default:
+        qemu_log_mask(LOG_UNIMP, "%s: unimp write 0x%08x\n", __func__,
+                      offset);
+    }
+}
+
+static const MemoryRegionOps pnv_qme_power10_xscom_ops = {
+    .read = pnv_qme_power10_xscom_read,
+    .write = pnv_qme_power10_xscom_write,
+    .valid.min_access_size = 8,
+    .valid.max_access_size = 8,
+    .impl.min_access_size = 8,
+    .impl.max_access_size = 8,
+    .endianness = DEVICE_BIG_ENDIAN,
+};
+
 static void pnv_quad_realize(DeviceState *dev, Error **errp)
 {
     PnvQuad *eq = PNV_QUAD(dev);
@@ -507,6 +546,12 @@ static void pnv_quad_realize(DeviceState *dev, Error **errp)
                           pqc->xscom_ops,
                           eq, name,
                           pqc->xscom_size);
+
+    snprintf(name, sizeof(name), "xscom-qme.%d", eq->quad_id);
+    pnv_xscom_region_init(&eq->xscom_qme_regs, OBJECT(dev),
+                          pqc->xscom_qme_ops,
+                          eq, name,
+                          pqc->xscom_qme_size);
 }
 
 static Property pnv_quad_properties[] = {
@@ -528,6 +573,9 @@ static void pnv_quad_power10_class_init(ObjectClass *oc, void *data)
 
     pqc->xscom_ops = &pnv_quad_power10_xscom_ops;
     pqc->xscom_size = PNV10_XSCOM_EQ_SIZE;
+
+    pqc->xscom_qme_ops = &pnv_qme_power10_xscom_ops;
+    pqc->xscom_qme_size = PNV10_XSCOM_QME_SIZE;
 }
 
 static void pnv_quad_class_init(ObjectClass *oc, void *data)
