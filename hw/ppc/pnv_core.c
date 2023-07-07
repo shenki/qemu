@@ -179,6 +179,7 @@ static const MemoryRegionOps pnv_core_power9_xscom_ops = {
  */
 
 #define PNV10_XSCOM_EC_CORE_THREAD_STATE    0x412
+#define PNV10_XSCOM_EC_RAS_STATUS           0x454
 
 static uint64_t pnv_core_power10_xscom_read(void *opaque, hwaddr addr,
                                            unsigned int width)
@@ -189,6 +190,9 @@ static uint64_t pnv_core_power10_xscom_read(void *opaque, hwaddr addr,
     switch (offset) {
     case PNV10_XSCOM_EC_CORE_THREAD_STATE:
         val = 0;
+        break;
+    case PNV10_XSCOM_EC_RAS_STATUS:
+        val = -1;
         break;
     default:
         qemu_log_mask(LOG_UNIMP, "%s: unimp read 0x%08x\n", __func__,
@@ -497,7 +501,12 @@ static const MemoryRegionOps pnv_quad_power10_xscom_ops = {
 };
 
 #define P10_QME_SPWU_HYP 0x83c
+#define  P10_SPWU_REQ           PPC_BIT(0)
+#define  P10_SPWU_DONE          PPC_BIT(4)
+
 #define P10_QME_SSH_HYP  0x82c
+#define  P10_SSH_CORE_GATED     PPC_BIT(0)
+#define  P10_SSH_SPWU_DONE      PPC_BIT(1)
 
 static uint64_t pnv_qme_power10_xscom_read(void *opaque, hwaddr addr,
                                             unsigned int width)
@@ -511,8 +520,11 @@ static uint64_t pnv_qme_power10_xscom_read(void *opaque, hwaddr addr,
      */
     switch (offset & ~0xf000) {
     case P10_QME_SPWU_HYP:
+        val = 0;
+        break;
     case P10_QME_SSH_HYP:
-        return 0;
+        val = P10_SSH_SPWU_DONE;
+        break;
     default:
         qemu_log_mask(LOG_UNIMP, "%s: unimp read 0x%08x\n", __func__,
                       offset);
@@ -527,6 +539,8 @@ static void pnv_qme_power10_xscom_write(void *opaque, hwaddr addr,
     uint32_t offset = addr >> 3;
 
     switch (offset) {
+    case P10_QME_SSH_HYP:
+    case P10_QME_SPWU_HYP:
     default:
         qemu_log_mask(LOG_UNIMP, "%s: unimp write 0x%08x\n", __func__,
                       offset);
