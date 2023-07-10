@@ -1452,6 +1452,7 @@ static void pnv_chip_quad_realize_one(PnvChip *chip, PnvQuad *eq,
                                        sizeof(*eq), type,
                                        &error_fatal, NULL);
 
+    object_property_set_link(OBJECT(eq), "chip", OBJECT(chip), &error_fatal);
     object_property_set_int(OBJECT(eq), "quad-id", core_id, &error_fatal);
     qdev_realize(DEVICE(eq), NULL, &error_fatal);
 }

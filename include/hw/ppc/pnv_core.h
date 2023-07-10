@@ -82,6 +82,7 @@ struct PnvQuad {
     DeviceState parent_obj;
 
     uint32_t quad_id;
+    PnvChip *chip;
     MemoryRegion xscom_regs;
     MemoryRegion xscom_qme_regs;
 };
