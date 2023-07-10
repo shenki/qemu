@@ -508,11 +508,25 @@ static const MemoryRegionOps pnv_quad_power10_xscom_ops = {
 #define  P10_SSH_CORE_GATED     PPC_BIT(0)
 #define  P10_SSH_SPWU_DONE      PPC_BIT(1)
 
+static PnvCore *get_core(PnvChip *chip, uint32_t offset)
+{
+    int core_num = 32 - clz32(extract32(offset, 12, 4));
+
+    printf("%s: core_num %d offset %04x nr_cores %d\n",
+            __func__, core_num, offset, chip->nr_cores);
+
+    assert(core_num > chip->nr_cores);
+
+    return chip->cores[core_num];
+}
+
 static uint64_t pnv_qme_power10_xscom_read(void *opaque, hwaddr addr,
                                             unsigned int width)
 {
     uint32_t offset = addr >> 3;
-    uint64_t val = -1;
+    PnvQuad *ec = PNV_QUAD(opaque);
+    PnvCore *core = get_core(ec->chip, offset);
+    uint64_t val = 0;
 
     /*
      * Forth nibble selects the core within a quad, mask it to process read
@@ -523,9 +537,12 @@ static uint64_t pnv_qme_power10_xscom_read(void *opaque, hwaddr addr,
         val = 0;
         break;
     case P10_QME_SSH_HYP:
+        if (core->gated)
+            val |= P10_SSH_CORE_GATED;
         val = P10_SSH_SPWU_DONE;
         break;
     default:
+        val = -1;
         qemu_log_mask(LOG_UNIMP, "%s: unimp read 0x%08x\n", __func__,
                       offset);
     }
@@ -537,10 +554,17 @@ static void pnv_qme_power10_xscom_write(void *opaque, hwaddr addr,
                                          uint64_t val, unsigned int width)
 {
     uint32_t offset = addr >> 3;
+    PnvQuad *ec = PNV_QUAD(opaque);
+    PnvCore *core = get_core(ec->chip, offset);
 
-    switch (offset) {
+    switch (offset & ~0xf000) {
     case P10_QME_SSH_HYP:
+        break;
     case P10_QME_SPWU_HYP:
+        if (val & P10_SPWU_REQ) {
+            core->gated = false;
+        }
+        break;
     default:
         qemu_log_mask(LOG_UNIMP, "%s: unimp write 0x%08x\n", __func__,
                       offset);

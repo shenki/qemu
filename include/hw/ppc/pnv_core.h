@@ -37,6 +37,7 @@ struct PnvCore {
     PowerPCCPU **threads;
     uint32_t pir;
     uint64_t hrmor;
+    bool gated;
     PnvChip *chip;
 
     MemoryRegion xscom_regs;
