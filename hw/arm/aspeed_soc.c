@@ -56,7 +56,7 @@ static const hwaddr aspeed_soc_ast2400_memmap[] = {
     [ASPEED_DEV_UART3]  = 0x1E78E000,
     [ASPEED_DEV_UART4]  = 0x1E78F000,
     [ASPEED_DEV_UART5]  = 0x1E784000,
-    [ASPEED_DEV_VUART]  = 0x1E787000,
+    [ASPEED_DEV_VUART1] = 0x1E787000,
     [ASPEED_DEV_SDRAM]  = 0x40000000,
 };
 
@@ -94,7 +94,7 @@ static const hwaddr aspeed_soc_ast2500_memmap[] = {
     [ASPEED_DEV_UART3]  = 0x1E78E000,
     [ASPEED_DEV_UART4]  = 0x1E78F000,
     [ASPEED_DEV_UART5]  = 0x1E784000,
-    [ASPEED_DEV_VUART]  = 0x1E787000,
+    [ASPEED_DEV_VUART1] = 0x1E787000,
     [ASPEED_DEV_SDRAM]  = 0x80000000,
 };
 
@@ -104,7 +104,7 @@ static const int aspeed_soc_ast2400_irqmap[] = {
     [ASPEED_DEV_UART3]  = 33,
     [ASPEED_DEV_UART4]  = 34,
     [ASPEED_DEV_UART5]  = 10,
-    [ASPEED_DEV_VUART]  = 8,
+    [ASPEED_DEV_VUART1] = 8,
     [ASPEED_DEV_FMC]    = 19,
     [ASPEED_DEV_EHCI1]  = 5,
     [ASPEED_DEV_EHCI2]  = 13,
