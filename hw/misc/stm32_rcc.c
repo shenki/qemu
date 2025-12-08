@@ -69,6 +69,40 @@ static void stm32_rcc_write(void *opaque, hwaddr addr,
     }
 
     switch (addr) {
+    case STM32_RCC_CR:
+        if (BIT(16) & value) {
+            // Set HSERDY
+            s->regs[addr / 4] |= value | BIT(17);
+        }
+        if (BIT(24) & value) {
+            // Set PLLRDY
+            s->regs[addr / 4] |= value | BIT(25);
+        }
+        return;
+    case STM32_RCC_CFGR:
+        // LL_RCC_SetSysClkSource
+        switch (value & 0x3) {
+        case 0:
+            // HSI
+            s->regs[addr / 4] |= (value & ~0xC);
+            return;
+        case 1:
+            // HSE
+            s->regs[addr / 4] |= (value & ~0xC) | 0x4;
+            return;
+        case 2:
+            // PLL
+            s->regs[addr / 4] |= (value & ~0xC) | 0x8;
+            return;
+        }
+        return;
+    case STM32_RCC_CSR:
+        // LL_RCC_LSI_Enable
+        if (BIT(0) & value) {
+            // LL_RCC_LSI_IsReady
+            s->regs[addr / 4] |= value | BIT(1);
+        }
+        return;
     case STM32_RCC_AHB1_RSTR...STM32_RCC_APB2_RSTR:
         prev_value = s->regs[addr / 4];
         s->regs[addr / 4] = value;
