@@ -156,6 +156,12 @@ config OMAP
     select SD
     select SERIAL_MM
 
+config P550_MCU
+    bool
+    default y
+    depends on TCG && ARM
+    select STM32F405_SOC
+
 config REALVIEW
     bool
     default y
