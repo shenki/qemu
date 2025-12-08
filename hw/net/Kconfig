@@ -98,6 +98,9 @@ config CADENCE
 config STELLARIS_ENET
     bool
 
+config STM32_ETH
+    bool
+
 config LANCE
     bool
     select PCNET_COMMON
