@@ -67,6 +67,8 @@ static void stm32f405_soc_initfn(Object *obj)
     for (i = 0; i < STM_NUM_USARTS; i++) {
         object_initialize_child(obj, "usart[*]", &s->usart[i],
                                 TYPE_STM32F2XX_USART);
+        g_autofree char *serial_alias = g_strdup_printf("serial%d", i + 1);
+        object_property_add_alias(obj, serial_alias, OBJECT(&s->usart[i]), "chardev");
     }
 
     for (i = 0; i < STM_NUM_TIMERS; i++) {
@@ -183,7 +185,6 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
     /* Attach UART (uses USART registers) and USART controllers */
     for (i = 0; i < STM_NUM_USARTS; i++) {
         dev = DEVICE(&(s->usart[i]));
-        qdev_prop_set_chr(dev, "chardev", serial_hd(i));
         if (!sysbus_realize(SYS_BUS_DEVICE(&s->usart[i]), errp)) {
             return;
         }
