@@ -161,6 +161,7 @@ config P550_MCU
     default y
     depends on TCG && ARM
     select STM32F405_SOC
+    select STM32_ETH
 
 config REALVIEW
     bool

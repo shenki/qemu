@@ -33,6 +33,7 @@
 #include "hw/misc/stm32f4xx_exti.h"
 #include "hw/or-irq.h"
 #include "hw/ssi/stm32f2xx_spi.h"
+#include "hw/net/stm32_eth.h"
 #include "hw/arm/armv7m.h"
 #include "qom/object.h"
 
@@ -64,6 +65,7 @@ struct STM32F405State {
     OrIRQState adc_irqs;
     STM32F2XXADCState adc[STM_NUM_ADCS];
     STM32F2XXSPIState spi[STM_NUM_SPIS];
+    Stm32EthState eth;
 
     MemoryRegion ccm;
     MemoryRegion sram;

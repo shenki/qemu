@@ -43,6 +43,9 @@ static const uint32_t adc_addr[] = { 0x40012000, 0x40012100, 0x40012200,
 static const uint32_t spi_addr[] =   { 0x40013000, 0x40003800, 0x40003C00,
                                        0x40013400, 0x40015000, 0x40015400 };
 #define EXTI_ADDR                      0x40013C00
+#define ETH_ADDR                       0x40028000
+#define ETH_SIZE                       0x8000
+#define ETH_IRQ                        61
 
 #define SYSCFG_IRQ               71
 static const int usart_irq[] = { 37, 38, 39, 52, 53, 71, 82, 83 };
@@ -85,6 +88,8 @@ static void stm32f405_soc_initfn(Object *obj)
     }
 
     object_initialize_child(obj, "exti", &s->exti, TYPE_STM32F4XX_EXTI);
+
+    object_initialize_child(obj, "eth", &s->eth, TYPE_STM32_ETH);
 
     s->sysclk = qdev_init_clock_in(DEVICE(s), "sysclk", NULL, NULL, 0);
     s->refclk = qdev_init_clock_in(DEVICE(s), "refclk", NULL, NULL, 0);
@@ -254,6 +259,15 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
     for (i = 0; i < 16; i++) {
         qdev_connect_gpio_out(DEVICE(&s->syscfg), i, qdev_get_gpio_in(dev, i));
     }
+
+    /* ETH device */
+    dev = DEVICE(&s->eth);
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->eth), errp)) {
+        return;
+    }
+    busdev = SYS_BUS_DEVICE(dev);
+    sysbus_mmio_map(busdev, 0, ETH_ADDR);
+    sysbus_connect_irq(busdev, 0, qdev_get_gpio_in(armv7m, ETH_IRQ));
 
     create_unimplemented_device("UID",         0x1FFF7A10, 0x40);
     create_unimplemented_device("timer[7]",    0x40001400, 0x400);
