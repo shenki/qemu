@@ -7,7 +7,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "system/address-spaces.h"
 #include "system/kvm.h"
 #include "hw/intc/riscv_aplic.h"
 #include "hw/intc/riscv_imsic.h"
@@ -25,7 +24,7 @@ uint32_t imsic_num_bits(uint32_t count)
     return ret;
 }
 
-DeviceState *riscv_create_aia(bool msimode, int aia_guests,
+DeviceState *riscv_create_aia(MemoryRegion *mr, bool msimode, int aia_guests,
                              uint32_t m_imsic_stride,
                              uint16_t num_sources,
                              const MemMapEntry *aplic_m,
@@ -49,8 +48,7 @@ DeviceState *riscv_create_aia(bool msimode, int aia_guests,
             /* Per-socket M-level IMSICs */
             addr = imsic_m->base + socket * (1U << IMSIC_MMIO_GROUP_MIN_SHIFT);
             for (i = 0; i < hart_count; i++) {
-                riscv_imsic_create(get_system_memory(),
-                                   addr + i * m_imsic_stride,
+                riscv_imsic_create(mr, addr + i * m_imsic_stride,
                                    base_hartid + i, true, 1,
                                    num_msis);
             }
@@ -60,8 +58,7 @@ DeviceState *riscv_create_aia(bool msimode, int aia_guests,
         guest_bits = imsic_num_bits(aia_guests + 1);
         addr = imsic_s->base + socket * (1U << IMSIC_MMIO_GROUP_MIN_SHIFT);
         for (i = 0; i < hart_count; i++) {
-            riscv_imsic_create(get_system_memory(),
-                               addr + i * IMSIC_HART_SIZE(guest_bits),
+            riscv_imsic_create(mr, addr + i * IMSIC_HART_SIZE(guest_bits),
                                base_hartid + i, false, 1 + aia_guests,
                                num_msis);
         }
@@ -69,8 +66,7 @@ DeviceState *riscv_create_aia(bool msimode, int aia_guests,
 
     if (!kvm_enabled()) {
         /* Per-socket M-level APLIC */
-        aplic_m_dev = riscv_aplic_create(get_system_memory(),
-                                     aplic_m->base +
+        aplic_m_dev = riscv_aplic_create(mr, aplic_m->base +
                                      socket * aplic_m->size,
                                      aplic_m->size,
                                      (msimode) ? 0 : base_hartid,
@@ -81,8 +77,7 @@ DeviceState *riscv_create_aia(bool msimode, int aia_guests,
     }
 
     /* Per-socket S-level APLIC */
-    aplic_s_dev = riscv_aplic_create(get_system_memory(),
-                                 aplic_s->base +
+    aplic_s_dev = riscv_aplic_create(mr, aplic_s->base +
                                  socket * aplic_s->size,
                                  aplic_s->size,
                                  (msimode) ? 0 : base_hartid,

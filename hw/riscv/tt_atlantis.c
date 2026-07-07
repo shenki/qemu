@@ -494,7 +494,8 @@ static void tt_atlantis_machine_init(MachineState *machine)
                             &error_abort);
     sysbus_realize(SYS_BUS_DEVICE(&s->soc), &error_fatal);
 
-    s->irqchip = riscv_create_aia(true, TT_IRQCHIP_GUESTS,
+    s->irqchip = riscv_create_aia(get_system_memory(),
+                                  true, TT_IRQCHIP_GUESTS,
                                   TT_IRQCHIP_MIMSIC_STRIDE,
                                   TT_IRQCHIP_NUM_SOURCES,
                                   &s->memmap[TT_ATL_MAPLIC],
