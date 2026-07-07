@@ -46,7 +46,9 @@ typedef struct RISCVAclintMTimerState {
     qemu_irq *timer_irqs;
 } RISCVAclintMTimerState;
 
-DeviceState *riscv_aclint_mtimer_create(hwaddr addr, hwaddr size,
+/* Create an MTIMER device and map it at @addr in @mr (must not be NULL) */
+DeviceState *riscv_aclint_mtimer_create(MemoryRegion *mr,
+    hwaddr addr, hwaddr size,
     uint32_t hartid_base, uint32_t num_harts,
     uint32_t timecmp_base, uint32_t time_base, uint32_t timebase_freq,
     bool provide_rdtime);
@@ -68,7 +70,9 @@ typedef struct RISCVAclintSwiState {
     qemu_irq *soft_irqs;
 } RISCVAclintSwiState;
 
-DeviceState *riscv_aclint_swi_create(hwaddr addr, uint32_t hartid_base,
+/* Create an SWI device and map it at @addr in @mr (must not be NULL) */
+DeviceState *riscv_aclint_swi_create(MemoryRegion *mr,
+    hwaddr addr, uint32_t hartid_base,
     uint32_t num_harts, bool sswi);
 
 enum {
