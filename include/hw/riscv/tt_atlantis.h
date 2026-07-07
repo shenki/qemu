@@ -31,6 +31,11 @@ struct TTAtlantisSoCState {
     /*< public >*/
     const MemMapEntry *memmap;
 
+    MemoryRegion *memory;
+    MemoryRegion *dram;
+    MemoryRegion ram_lo;
+    MemoryRegion ram_hi;
+
     RISCVHartArrayState cpus;
     DeviceState *irqchip;
     DesignWareI2CState i2c[TT_ATL_NUM_I2C];
@@ -48,6 +53,7 @@ struct TTAtlantisState {
     /*< public >*/
     Notifier machine_done;
 
+    MemoryRegion soc_memory;
     TTAtlantisSoCState soc;
 
     int fdt_size;

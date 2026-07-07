@@ -498,7 +498,16 @@ static void tt_atlantis_soc_init(Object *obj)
 static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
 {
     TTAtlantisSoCState *s = TT_ATLANTIS_SOC(dev);
-    MemoryRegion *system_memory = get_system_memory();
+    ram_addr_t lo_ram_size;
+
+    if (!s->memory) {
+        error_setg(errp, "'memory' link is not set");
+        return;
+    }
+    if (!s->dram) {
+        error_setg(errp, "'dram' link is not set");
+        return;
+    }
 
     s->memmap = tt_atlantis_memmap;
 
@@ -512,11 +521,13 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
     object_property_set_int(OBJECT(&s->cpus), "resetvec",
                             s->memmap[TT_ATL_BOOTROM].base,
                             &error_abort);
+    object_property_set_link(OBJECT(&s->cpus), "memory", OBJECT(s->memory),
+                             &error_abort);
     if (!sysbus_realize(SYS_BUS_DEVICE(&s->cpus), errp)) {
         return;
     }
 
-    s->irqchip = riscv_create_aia(get_system_memory(),
+    s->irqchip = riscv_create_aia(s->memory,
                                   true, TT_IRQCHIP_GUESTS,
                                   TT_IRQCHIP_MIMSIC_STRIDE,
                                   TT_IRQCHIP_NUM_SOURCES,
@@ -528,7 +539,7 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
                                   TT_IRQCHIP_NUM_MSIS,
                                   TT_IRQCHIP_NUM_PRIO_BITS);
 
-    riscv_aclint_mtimer_create(get_system_memory(),
+    riscv_aclint_mtimer_create(s->memory,
             s->memmap[TT_ATL_ACLINT].base,
             TT_ACLINT_MTIME_SIZE,
             0, s->num_harts,
@@ -536,16 +547,40 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
             TT_ACLINT_MTIME,
             TT_ACLINT_TIMEBASE_FREQ, true);
 
+    /*
+     * DDR
+     *
+     * The high address is where RAM lives. It is always present and may be
+     * up to 64GB. The low address is an alias of the first 2GB of that RAM.
+     */
+    if (memory_region_size(s->dram) > s->memmap[TT_ATL_DDR_HI].size) {
+        g_autofree char *sz = size_to_str(s->memmap[TT_ATL_DDR_HI].size);
+        error_setg(errp, "RAM size is too large, maximum is %s", sz);
+        return;
+    }
+
+    memory_region_init_alias(&s->ram_hi, OBJECT(s), "ram.high", s->dram,
+                             0, memory_region_size(s->dram));
+    memory_region_add_subregion(s->memory,
+                                s->memmap[TT_ATL_DDR_HI].base, &s->ram_hi);
+
+    lo_ram_size = MIN(memory_region_size(s->dram),
+                      s->memmap[TT_ATL_DDR_LO].size);
+    memory_region_init_alias(&s->ram_lo, OBJECT(s), "ram.low", s->dram,
+                             0, lo_ram_size);
+    memory_region_add_subregion(s->memory,
+                                s->memmap[TT_ATL_DDR_LO].base, &s->ram_lo);
+
     /* Boot ROM */
     if (!memory_region_init_rom(&s->bootrom, OBJECT(s), "tt-atlantis.bootrom",
                                 s->memmap[TT_ATL_BOOTROM].size, errp)) {
         return;
     }
-    memory_region_add_subregion(system_memory, s->memmap[TT_ATL_BOOTROM].base,
+    memory_region_add_subregion(s->memory, s->memmap[TT_ATL_BOOTROM].base,
                                 &s->bootrom);
 
     /* UART1, the soc console (UART0 is for the boot microcontroller) */
-    serial_mm_init(system_memory, s->memmap[TT_ATL_UART1].base, 2,
+    serial_mm_init(s->memory, s->memmap[TT_ATL_UART1].base, 2,
                    qdev_get_gpio_in(s->irqchip, TT_ATL_UART1_IRQ),
                    115200, serial_hd(0), DEVICE_LITTLE_ENDIAN);
     /*
@@ -557,7 +592,7 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
      * Create an unimplemented device region so writes don't fault
      * and reads return zero, which keeps Linux happy.
      */
-    mmio_map_unimplemented(system_memory, SYS_BUS_DEVICE(&s->uart1),
+    mmio_map_unimplemented(s->memory, SYS_BUS_DEVICE(&s->uart1),
                            "tt-atlantis.uart1", s->memmap[TT_ATL_UART1].base,
                            s->memmap[TT_ATL_UART1].size);
 
@@ -568,7 +603,7 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
         if (!sysbus_realize(sbd, errp)) {
             return;
         }
-        memory_region_add_subregion(system_memory,
+        memory_region_add_subregion(s->memory,
                                     s->memmap[TT_ATL_I2C0 + i].base,
                                     sysbus_mmio_get_region(sbd, 0));
         sysbus_connect_irq(sbd, 0,
@@ -579,6 +614,10 @@ static void tt_atlantis_soc_realize(DeviceState *dev, Error **errp)
 static const Property tt_atlantis_soc_props[] = {
     DEFINE_PROP_STRING("cpu-type", TTAtlantisSoCState, cpu_type),
     DEFINE_PROP_UINT32("num-harts", TTAtlantisSoCState, num_harts, 1),
+    DEFINE_PROP_LINK("memory", TTAtlantisSoCState, memory,
+                     TYPE_MEMORY_REGION, MemoryRegion *),
+    DEFINE_PROP_LINK("dram", TTAtlantisSoCState, dram,
+                     TYPE_MEMORY_REGION, MemoryRegion *),
 };
 
 static void tt_atlantis_soc_class_init(ObjectClass *oc, const void *data)
@@ -595,10 +634,9 @@ static void tt_atlantis_machine_init(MachineState *machine)
 {
     TTAtlantisState *s = TT_ATLANTIS_MACHINE(machine);
 
-    MemoryRegion *system_memory = get_system_memory();
-    MemoryRegion *ram_hi = g_new(MemoryRegion, 1);
-    MemoryRegion *ram_lo = g_new(MemoryRegion, 1);
-    ram_addr_t lo_ram_size;
+    memory_region_init(&s->soc_memory, OBJECT(machine),
+                       "tt-atlantis.soc-memory", UINT64_MAX);
+    memory_region_add_subregion(get_system_memory(), 0, &s->soc_memory);
 
     object_initialize_child(OBJECT(machine), "soc", &s->soc,
                             TYPE_TT_ATLANTIS_SOC);
@@ -606,31 +644,11 @@ static void tt_atlantis_machine_init(MachineState *machine)
                             &error_abort);
     object_property_set_int(OBJECT(&s->soc), "num-harts", machine->smp.cpus,
                             &error_abort);
+    object_property_set_link(OBJECT(&s->soc), "memory",
+                             OBJECT(&s->soc_memory), &error_abort);
+    object_property_set_link(OBJECT(&s->soc), "dram", OBJECT(machine->ram),
+                             &error_abort);
     qdev_realize(DEVICE(&s->soc), NULL, &error_fatal);
-
-    /*
-     * DDR
-     *
-     * The high address is where RAM lives. It is always present and may be
-     * up to 64GB. The low address is an alias of the first 2GB of that RAM.
-     */
-    if (machine->ram_size > s->soc.memmap[TT_ATL_DDR_HI].size) {
-        char *sz = size_to_str(s->soc.memmap[TT_ATL_DDR_HI].size);
-        error_report("RAM size is too large, maximum is %s", sz);
-        g_free(sz);
-        exit(EXIT_FAILURE);
-    }
-
-    memory_region_init_alias(ram_hi, OBJECT(machine), "ram.high", machine->ram,
-                             0, machine->ram_size);
-    memory_region_add_subregion(system_memory,
-                                s->soc.memmap[TT_ATL_DDR_HI].base, ram_hi);
-
-    lo_ram_size = MIN(machine->ram_size, s->soc.memmap[TT_ATL_DDR_LO].size);
-    memory_region_init_alias(ram_lo, OBJECT(machine), "ram.low", machine->ram,
-                             0, lo_ram_size);
-    memory_region_add_subregion(system_memory,
-                                s->soc.memmap[TT_ATL_DDR_LO].base, ram_lo);
 
     /* I2C peripherals: qemu specific */
     i2c_slave_create_simple(i2c_get_bus(s, 0), "ds1338", 0x6f);
