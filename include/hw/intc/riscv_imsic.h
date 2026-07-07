@@ -62,7 +62,9 @@ struct RISCVIMSICState {
     uint32_t num_irqs;
 };
 
-DeviceState *riscv_imsic_create(hwaddr addr, uint32_t hartid, bool mmode,
+/* Create an IMSIC device and map it at @addr in @mr (must not be NULL) */
+DeviceState *riscv_imsic_create(MemoryRegion *mr, hwaddr addr,
+                                uint32_t hartid, bool mmode,
                                 uint32_t num_pages, uint32_t num_ids);
 
 #endif
