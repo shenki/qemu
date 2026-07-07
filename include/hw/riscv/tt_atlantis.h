@@ -18,7 +18,26 @@
 #define TYPE_TT_ATLANTIS_MACHINE MACHINE_TYPE_NAME("tt-atlantis")
 OBJECT_DECLARE_SIMPLE_TYPE(TTAtlantisState, TT_ATLANTIS_MACHINE)
 
+#define TYPE_TT_ATLANTIS_SOC "tt-atlantis-soc"
+OBJECT_DECLARE_SIMPLE_TYPE(TTAtlantisSoCState, TT_ATLANTIS_SOC)
+
 #define TT_ATL_NUM_I2C 5
+
+struct TTAtlantisSoCState {
+    /*< private >*/
+    DeviceState parent;
+
+    /*< public >*/
+    const MemMapEntry *memmap;
+
+    RISCVHartArrayState cpus;
+    DeviceState *irqchip;
+    DesignWareI2CState i2c[TT_ATL_NUM_I2C];
+    MemoryRegion bootrom;
+
+    uint32_t num_harts;
+    char *cpu_type;
+};
 
 struct TTAtlantisState {
     /*< private >*/
@@ -26,11 +45,8 @@ struct TTAtlantisState {
 
     /*< public >*/
     Notifier machine_done;
-    const MemMapEntry *memmap;
 
-    RISCVHartArrayState soc;
-    DeviceState *irqchip;
-    DesignWareI2CState i2c[TT_ATL_NUM_I2C];
+    TTAtlantisSoCState soc;
 
     int fdt_size;
 };
